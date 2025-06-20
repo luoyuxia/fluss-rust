@@ -21,7 +21,7 @@ impl FlussAdmin {
     ) -> Self {
         FlussAdmin {
             conn: conns,
-            metadata_updater: metadata_updater,
+            metadata_updater,
         }
     }
 
@@ -36,7 +36,7 @@ impl FlussAdmin {
         let mut connections_guard = self.conn.lock().unwrap();
         let connection = connections_guard.get_conn(&node).await.unwrap();
         let create_table_request =
-            build_create_table_request(&table_path, &table_descriptor, ignore_if_exists);
+            build_create_table_request(table_path, table_descriptor, ignore_if_exists);
         connection
             .send_recieve::<messages::CreateTableRequest, messages::CreateTableResponse>(
                 create_table_request,
@@ -51,7 +51,7 @@ impl FlussAdmin {
         let mut connections_guard = self.conn.lock().unwrap();
         let connection = connections_guard.get_conn(&node).await.unwrap();
 
-        let get_table_request = build_get_table_request(&table_path);
+        let get_table_request = build_get_table_request(table_path);
 
         let get_table_response = connection
             .send_recieve::<GetTableInfoRequest, GetTableInfoResponse>(get_table_request)

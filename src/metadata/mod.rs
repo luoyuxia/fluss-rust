@@ -2,12 +2,9 @@ use core::fmt;
 use std::{
     collections::{HashMap, HashSet},
     fmt::{Display, Formatter},
-    sync::Arc,
 };
 
-use linked_hash_map::VacantEntry;
 use serde::{Deserialize, Serialize};
-use serde_with::serde_as;
 
 use crate::Result;
 pub mod metadata_serde;
@@ -21,10 +18,10 @@ pub struct TablePath {
 
 impl TablePath {
     pub fn new(db: String, tbl: String) -> Self {
-        return TablePath {
+        TablePath {
             database: db,
             table: tbl,
-        };
+        }
     }
 
     #[inline]
@@ -123,6 +120,12 @@ pub struct BooleanType {
     nullable: bool,
 }
 
+impl Default for BooleanType {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BooleanType {
     pub fn new() -> Self {
         Self::with_nullable(true)
@@ -140,6 +143,12 @@ impl BooleanType {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct TinyIntType {
     nullable: bool,
+}
+
+impl Default for TinyIntType {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TinyIntType {
@@ -161,6 +170,12 @@ pub struct SmallIntType {
     nullable: bool,
 }
 
+impl Default for SmallIntType {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SmallIntType {
     pub fn new() -> Self {
         Self::with_nullable(true)
@@ -178,6 +193,12 @@ impl SmallIntType {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct IntType {
     nullable: bool,
+}
+
+impl Default for IntType {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl IntType {
@@ -199,6 +220,12 @@ pub struct BigIntType {
     nullable: bool,
 }
 
+impl Default for BigIntType {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BigIntType {
     pub fn new() -> Self {
         Self::with_nullable(true)
@@ -218,6 +245,12 @@ pub struct FloatType {
     nullable: bool,
 }
 
+impl Default for FloatType {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FloatType {
     pub fn new() -> Self {
         Self::with_nullable(true)
@@ -235,6 +268,12 @@ impl FloatType {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct DoubleType {
     nullable: bool,
+}
+
+impl Default for DoubleType {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DoubleType {
@@ -284,6 +323,12 @@ impl Display for CharType {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct StringType {
     nullable: bool,
+}
+
+impl Default for StringType {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl StringType {
@@ -346,6 +391,12 @@ impl DecimalType {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct DateType {
     nullable: bool,
+}
+
+impl Default for DateType {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DateType {
@@ -476,6 +527,12 @@ impl TimestampLTzType {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct BytesType {
     nullable: bool,
+}
+
+impl Default for BytesType {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BytesType {
@@ -751,9 +808,9 @@ pub struct DataField {
 impl DataField {
     pub fn new(name: String, data_type: DataType, description: Option<String>) -> DataField {
         DataField {
-            name: name,
-            data_type: data_type,
-            description: description,
+            name,
+            data_type,
+            description,
         }
     }
 
@@ -950,7 +1007,7 @@ impl SchemaBuilder {
         self
     }
 
-    pub fn primary_key(mut self, column_names: Vec<String>) -> Self {
+    pub fn primary_key(self, column_names: Vec<String>) -> Self {
         let constraint_name = format!("PK_{}", column_names.join("_"));
         self.primary_key_named(&constraint_name, column_names)
     }
@@ -973,7 +1030,7 @@ impl SchemaBuilder {
             .collect();
 
         Schema {
-            columns: columns,
+            columns,
             primary_key: self.primary_key.clone(),
             row_type: DataType::Row(RowType::new(data_fields)),
         }
@@ -1124,7 +1181,7 @@ impl TableDescriptorBuilder {
             schema,
             comment: self.comment,
             partition_keys: self.partition_keys,
-            table_distribution: table_distribution,
+            table_distribution,
             properties: self.properties,
             custom_properties: self.custom_properties,
         }
@@ -1284,7 +1341,7 @@ impl TableDescriptor {
         partition_keys: &[String],
         origin_distribution: Option<TableDistribution>,
     ) -> Option<TableDistribution> {
-        if let Some(mut distribution) = origin_distribution {
+        if let Some(distribution) = origin_distribution {
             if distribution
                 .bucket_keys
                 .iter()
@@ -1632,9 +1689,9 @@ pub struct TableBucket {
 impl TableBucket {
     pub fn new(table_id: i64, bucket: i32) -> Self {
         TableBucket {
-            table_id: table_id,
+            table_id,
             partition_id: None,
-            bucket: bucket,
+            bucket,
         }
     }
 

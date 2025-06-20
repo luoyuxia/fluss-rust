@@ -1,15 +1,13 @@
 use std::{
     cell::Cell,
     collections::HashMap,
-    marker::PhantomData,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
-use rand::distr::Map;
 
 const LOG_FETCH_MAX_BYTES: i32 = 16 * 1024 * 1024;
-const LOG_FETCH_MAX_BYTES_FOR_BUCKET: i32 = 1 * 1024;
+const LOG_FETCH_MAX_BYTES_FOR_BUCKET: i32 = 1024;
 const LOG_FETCH_MIN_BYTES: i32 = 1;
 const LOG_FETCH_WAIT_MAX_TIME: i32 = 500;
 
@@ -65,14 +63,14 @@ impl LogScanner {
         self.metadata_updater
             .lock()
             .unwrap()
-            .check_and_update_table_metadta(&vec![self.table_path.clone()])
+            .check_and_update_table_metadta(&[self.table_path.clone()])
             .await;
         self.log_scanner_status
             .assign_scan_bucket(table_bucket, offset);
     }
 
     async fn poll_for_fetches(&self) -> Result<HashMap<TableBucket, Vec<ScanRecord>>> {
-        Ok(self.log_fetcher.send_fetches_and_collect().await?)
+        self.log_fetcher.send_fetches_and_collect().await
     }
 }
 
@@ -168,7 +166,7 @@ impl LogFetcher {
                 bucket_id: bucket.bucket_id(),
                 fetch_offset: offset,
                 // 1M
-                max_fetch_bytes: 1 * 1024 * 1024,
+                max_fetch_bytes: 1024 * 1024,
             };
             fetch_log_req_for_buckets
                 .entry(leader)

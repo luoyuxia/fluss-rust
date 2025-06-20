@@ -16,12 +16,11 @@ use tokio::{
         TcpStream,
         tcp::{OwnedReadHalf, OwnedWriteHalf},
     },
-    sync::{self},
 };
 use tracing::{debug, trace};
 
 use crate::{
-    Error, Result,
+    Result,
     admin::admin::FlussAdmin,
     args::Args,
     metadata::{TablePath, metadata_updater::MetadataUpdater},
@@ -65,8 +64,8 @@ impl<'a> FlussConnection {
         let metadata_updater = Arc::new(Mutex::new(_metadata_updater));
         FlussConnection {
             connections: conections_ref.clone(),
-            metadata_updater: metadata_updater,
-            connection_config: connection_config,
+            metadata_updater,
+            connection_config,
         }
     }
 
@@ -94,7 +93,7 @@ impl Connections {
     pub fn new(connection_config: ConnectionConfig) -> Self {
         Connections {
             conns: HashMap::new(),
-            connection_config: connection_config,
+            connection_config,
         }
     }
 
@@ -144,7 +143,7 @@ impl ServerNode {
         };
         ServerNode {
             id,
-            uid: uid,
+            uid,
             host,
             port,
             server_type,
@@ -315,7 +314,7 @@ impl Connection {
         Ok(Connection {
             uid: server_node.uid.clone(),
             host: server_node.host.clone(),
-            stream: stream,
+            stream,
             port: server_node.port,
             request_id: 0,
         })
@@ -371,7 +370,7 @@ async fn __get_response<T: Message + Default>(conn: &mut Connection) -> Result<T
     let frame_lengh = __read_int(conn).await?;
     // read response type
     // todo: echk resp_type
-    let resp_type = conn.read_exact_alloc(1).await?.get(0).unwrap().clone();
+    let resp_type = *conn.read_exact_alloc(1).await?.first().unwrap();
     // read request id;
     let request_id = __read_int(conn).await?;
     let message_size = frame_lengh - RESPONSE_HEADER_LENGTH;

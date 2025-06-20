@@ -1,8 +1,7 @@
 //! Error struct and methods
 use arrow::error::ArrowError;
-use core::error;
 use prost::DecodeError;
-use std::{io, result, sync::Arc};
+use std::{io, result};
 use thiserror::Error;
 
 pub type Result<T> = result::Result<T, Error>;

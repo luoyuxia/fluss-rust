@@ -13,7 +13,6 @@ pub use self::error::{Error, Result};
 
 use prost::Message;
 
-use std::io::Cursor;
 
 // Include the `items` module, which is generated from items.proto.
 pub mod messages {

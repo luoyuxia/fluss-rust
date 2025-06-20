@@ -1,17 +1,13 @@
-use std::{
-    marker::PhantomData,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use log::LogScanner;
 
 use crate::{
-    connection::{Connections, FlussConnection},
+    connection::Connections,
     metadata::{
         TableInfo,
-        metadata_updater::{self, MetadataUpdater},
+        metadata_updater::MetadataUpdater,
     },
-    record::row::InternalRow,
 };
 
 pub mod log;
@@ -29,8 +25,8 @@ impl TableScan {
         metadata_updater: Arc<Mutex<MetadataUpdater>>,
     ) -> TableScan {
         Self {
-            conns: conns,
-            table_info: table_info,
+            conns,
+            table_info,
             metadata_updater: metadata_updater.clone(),
         }
     }

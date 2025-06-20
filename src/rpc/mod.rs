@@ -1,9 +1,8 @@
 use std::{i8, io::Write, mem};
 
 use arrow::array::RecordBatch;
-use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use prost::Message;
-use serde_json::Value;
 
 use crate::{
     connection::{ServerNode, ServerType},
@@ -61,9 +60,9 @@ pub struct HeaderRequest {
 impl HeaderRequest {
     fn new(api_key: i16, api_version: i16, request_id: i32) -> HeaderRequest {
         HeaderRequest {
-            api_key: api_key,
-            api_version: api_version,
-            request_id: request_id,
+            api_key,
+            api_version,
+            request_id,
         }
     }
 }
@@ -95,13 +94,9 @@ where
     buf.write_i32::<BigEndian>(request_id)?;
 
     // payload
-    // todo: it'll need to convert to bytes and then write
-    // consider to make it more effcient
-    let mut request_buf = Vec::new();
-    request_buf.reserve(request.encoded_len());
-    // Unwrap is safe, since we have reserved sufficient capacity in the vector.
+    let mut request_buf = Vec::with_capacity(request.encoded_len());
     request.encode(&mut request_buf).unwrap();
-    buf.write_all(request_buf.as_slice()).map_err(From::from)
+    buf.write_all(&request_buf).map_err(From::from)
 }
 
 pub fn build_metadata_request(
@@ -192,14 +187,14 @@ pub fn build_produce_log_request(
     let mut record_bytes_builder = MemoryLogRecordsArrowBuilder::new(schema_id, &record_batch);
     bucket_req.push(PbProduceLogReqForBucket {
         partition_id: Option::None,
-        bucket_id: bucket_id,
+        bucket_id,
         records: record_bytes_builder.build().unwrap(),
     });
 
     let produce_request = ProduceLogRequest {
-        acks: acks,
-        table_id: table_id,
-        timeout_ms: timeout_ms,
+        acks,
+        table_id,
+        timeout_ms,
         buckets_req: bucket_req,
     };
 

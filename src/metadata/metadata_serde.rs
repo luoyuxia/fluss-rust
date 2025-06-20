@@ -58,7 +58,7 @@ impl JsonSerde for DataType {
 
         obj.insert(
             Self::FIELD_NAME_TYPE_NAME.to_string(),
-            json!(Self::to_type_root(&self)),
+            json!(Self::to_type_root(self)),
         );
         if !self.is_nullable() {
             obj.insert(Self::FIELD_NAME_NULLABLE.to_string(), json!(false));
@@ -452,7 +452,7 @@ mod test {
 
     use serde_json::Value;
 
-    use crate::metadata::{DataTypes, Schema, TableDescriptor, TableDescriptorBuilder};
+    use crate::metadata::{DataTypes, Schema, TableDescriptor};
 
     use super::JsonSerde;
 

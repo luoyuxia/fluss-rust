@@ -36,7 +36,7 @@ impl Table {
             conn: con,
             metadata_updater: metadata_updater.clone(),
             table_path: table_path.clone(),
-            table_info: table_info,
+            table_info,
         }
     }
 

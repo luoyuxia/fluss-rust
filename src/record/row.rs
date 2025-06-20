@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use arrow::array::{
-    self, AsArray, BinaryArray, FixedSizeBinaryArray, Float32Array, Float64Array, Int8Array,
-    Int16Array, Int32Array, Int64Array, PrimitiveArray, RecordBatch, StringArray,
+    AsArray, BinaryArray, FixedSizeBinaryArray, Float32Array, Float64Array, Int8Array,
+    Int16Array, Int32Array, Int64Array, RecordBatch, StringArray,
 };
 
 pub trait InternalRow {
@@ -71,7 +71,7 @@ impl ColumnarRow {
     pub fn new_with_row_id(bach: Arc<RecordBatch>, row_id: usize) -> Self {
         ColumnarRow {
             record_batch: bach,
-            row_id: row_id,
+            row_id,
         }
     }
 

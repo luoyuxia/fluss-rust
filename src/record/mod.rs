@@ -1,10 +1,9 @@
 use core::fmt;
-use std::{collections::HashMap, vec::IntoIter};
+use std::collections::HashMap;
 
-use arrow::array::RecordBatch;
-use row::{ColumnarRow, InternalRow};
+use row::ColumnarRow;
 
-use crate::{metadata::TableBucket, metadata::TablePath};
+use crate::metadata::TableBucket;
 
 pub mod log_records;
 pub mod row;
@@ -84,7 +83,7 @@ impl ScanRecord {
 
     pub fn new_default(row: ColumnarRow) -> Self {
         ScanRecord {
-            row: row,
+            row,
             offset: Self::INVALID,
             timestamp: Self::INVALID,
             change_type: ChangeType::Insert,
@@ -93,10 +92,10 @@ impl ScanRecord {
 
     pub fn new(row: ColumnarRow, offset: i64, timestamp: i64, change_type: ChangeType) -> Self {
         ScanRecord {
-            row: row,
-            offset: offset,
-            timestamp: timestamp,
-            change_type: change_type,
+            row,
+            offset,
+            timestamp,
+            change_type,
         }
     }
 

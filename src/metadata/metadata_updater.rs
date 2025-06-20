@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Mutex, RwLock},
 };
 
-use rand::{Rng, random_range};
+use rand::random_range;
 
 use crate::{
     Result,
@@ -38,13 +38,11 @@ impl Cluster {
         table_id_by_path: HashMap<TablePath, i64>,
         table_info_by_path: HashMap<TablePath, TableInfo>,
     ) -> Self {
-        let alive_tablet_servers = alive_tablet_servers_by_id
-            .iter()
-            .map(|(_, server)| server.clone())
+        let alive_tablet_servers = alive_tablet_servers_by_id.values().cloned()
             .collect();
         let table_path_by_id = table_id_by_path
             .iter()
-            .map(|(path, table_id)| (table_id.clone(), path.clone()))
+            .map(|(path, table_id)| (*table_id, path.clone()))
             .collect();
         let available_locations_by_bucket: HashMap<TableBucket, BucketLocation> =
             available_locations_by_path
@@ -92,11 +90,11 @@ impl Cluster {
     }
 
     pub fn get_coordinator_server(&self) -> Option<ServerNode> {
-        return self.coordinator_server.clone();
+        self.coordinator_server.clone()
     }
 
     pub fn get_table_info_by_path(&self) -> &HashMap<TablePath, TableInfo> {
-        return &self.table_info_by_path;
+        &self.table_info_by_path
     }
 
     pub fn get_table_id_by_path(&self) -> &HashMap<TablePath, i64> {
@@ -125,7 +123,7 @@ impl Cluster {
 
     pub fn get_one_avaiable_server(&self) -> ServerNode {
         assert!(
-            self.alive_tablet_servers.len() > 0,
+            !self.alive_tablet_servers.is_empty(),
             "no alive tablet server in cluster"
         );
         let offset = random_range(0..self.alive_tablet_servers.len());
@@ -145,10 +143,7 @@ impl Cluster {
             servers.insert(server_id, server_node);
         }
 
-        let coordinator_server = match metadata_response.coordinator_server {
-            Some(node) => Some(from_pb_server_node(node, ServerType::CoordinatorServer)),
-            None => None,
-        };
+        let coordinator_server = metadata_response.coordinator_server.map(|node| from_pb_server_node(node, ServerType::CoordinatorServer));
 
         let mut table_id_by_path = HashMap::new();
         let mut table_info_by_path = HashMap::new();
@@ -282,7 +277,7 @@ impl MetadataUpdater {
         );
         let mut connections_guard = connections.lock().unwrap();
         let con = connections_guard.get_conn(&server_node).await.unwrap();
-        let request = build_metadata_request(&vec![]);
+        let request = build_metadata_request(&[]);
         let metadata_response = con
             .send_recieve::<messages::MetadataRequest, messages::MetadataResponse>(request)
             .await?;

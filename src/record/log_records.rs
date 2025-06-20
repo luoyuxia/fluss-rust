@@ -1,30 +1,27 @@
 use std::{
-    io::{Cursor, Read, Seek, SeekFrom, Write},
-    marker::PhantomData,
+    io::{Cursor, Read, Write},
     sync::Arc,
-    vec::IntoIter,
 };
 
 use arrow::{
-    array::{RecordBatch, record_batch},
+    array::RecordBatch,
     ipc::{
         reader::StreamReader,
-        writer::{DictionaryTracker, FileWriter, IpcDataGenerator, IpcWriteOptions, StreamWriter},
+        writer::StreamWriter,
     },
 };
-use arrow_schema::{ArrowError, SchemaRef};
+use arrow_schema::SchemaRef;
 use arrow_schema::{DataType as ArrowDataType, Field, Schema};
 use byteorder::WriteBytesExt;
 use byteorder::{ByteOrder, LittleEndian};
 use crc32c::crc32c;
-use prost::bytes::BytesMut;
 use tokio::io::AsyncReadExt;
 
-use crate::{Result, metadata::DataType, table::scanner::log};
+use crate::{Result, metadata::DataType};
 
 use super::{
     ChangeType, ScanRecord,
-    row::{ColumnarRow, InternalRow},
+    row::ColumnarRow,
 };
 
 /// const for record batch
@@ -88,12 +85,12 @@ impl<'a> MemoryLogRecordsArrowBuilder<'a> {
     pub fn new(schema_id: i32, arrow_record_batch: &'a RecordBatch) -> Self {
         MemoryLogRecordsArrowBuilder {
             base_log_offset: BUILDER_DEFAULT_OFFSET,
-            schema_id: schema_id,
+            schema_id,
             magic: CURRENT_LOG_MAGIC_VALUE,
             writer_id: NO_WRITER_ID,
             batch_sequence: NO_BATCH_SEQUENCE,
             record_count: arrow_record_batch.num_rows() as i32,
-            arrow_record_batch: arrow_record_batch,
+            arrow_record_batch,
         }
     }
 
@@ -104,7 +101,7 @@ impl<'a> MemoryLogRecordsArrowBuilder<'a> {
             StreamWriter::try_new(&mut arrow_batch_bytes, &self.arrow_record_batch.schema())?;
         // get header len
         let header = writer.get_ref().len();
-        writer.write(&self.arrow_record_batch)?;
+        writer.write(self.arrow_record_batch)?;
         // get real arrow batch bytes
         let real_arrow_batch_bytes = &arrow_batch_bytes[header..];
 
@@ -118,7 +115,7 @@ impl<'a> MemoryLogRecordsArrowBuilder<'a> {
         cursor.set_position(RECORD_BATCH_HEADER_SIZE as u64);
         cursor.write_all(real_arrow_batch_bytes)?;
 
-        let calcute_crc_bytes = &cursor.get_ref()[SCHEMA_ID_OFFSET as usize..];
+        let calcute_crc_bytes = &cursor.get_ref()[SCHEMA_ID_OFFSET..];
         // then update crc
         let crc = crc32c(calcute_crc_bytes);
         cursor.set_position(CRC_OFFSET as u64);
@@ -142,7 +139,7 @@ impl<'a> MemoryLogRecordsArrowBuilder<'a> {
         let append_only = true;
         cursor.write_u8(if append_only { 1 } else { 0 })?;
         cursor.write_i32::<LittleEndian>(if self.record_count > 0 {
-            (self.record_count - 1) as i32
+            self.record_count - 1
         } else {
             0
         })?;
@@ -164,9 +161,9 @@ impl<'a> LogRecordsBatchs<'a> {
     pub fn new(data: &'a [u8]) -> Self {
         let remaining_bytes: usize = data.len();
         Self {
-            data: data,
+            data,
             current_pos: 0,
-            remaining_bytes: remaining_bytes,
+            remaining_bytes,
         }
     }
 
@@ -204,7 +201,7 @@ pub struct LogRecordBatch<'a> {
 
 impl<'a> LogRecordBatch<'a> {
     pub fn new(data: &'a [u8]) -> Self {
-        LogRecordBatch { data: data }
+        LogRecordBatch { data }
     }
 
     pub fn magic(&self) -> u8 {
@@ -322,18 +319,19 @@ impl<'a> LogRecordBatch<'a> {
 }
 
 pub fn to_arrow_schema(fluss_schema: &DataType) -> SchemaRef {
-    let schema_ref = match &fluss_schema {
+    
+    match &fluss_schema {
         DataType::Row(row_type) => {
             let fields: Vec<Field> = row_type
                 .fields()
                 .iter()
                 .map(|f| {
-                    let field = Field::new(
+                    
+                    Field::new(
                         f.name(),
                         to_arrow_type(f.data_type()),
                         f.data_type().is_nullable(),
-                    );
-                    field
+                    )
                 })
                 .collect();
 
@@ -342,8 +340,7 @@ pub fn to_arrow_schema(fluss_schema: &DataType) -> SchemaRef {
         _ => {
             panic!("must be row data tyoe.")
         }
-    };
-    schema_ref
+    }
 }
 
 pub fn to_arrow_type(fluss_type: &DataType) -> ArrowDataType {
@@ -377,7 +374,7 @@ pub struct ReadContext {
 impl ReadContext {
     pub fn new(arrow_schema: SchemaRef) -> ReadContext {
         ReadContext {
-            arrow_schema: arrow_schema,
+            arrow_schema,
         }
     }
 
@@ -457,7 +454,7 @@ pub struct ArrowReader {
 impl ArrowReader {
     pub fn new(record_batch: Arc<RecordBatch>) -> Self {
         ArrowReader {
-            record_batch: record_batch,
+            record_batch,
         }
     }
 
@@ -478,7 +475,7 @@ mod test {
     use arrow::{
         array::record_batch,
         ipc::{
-            reader::{FileReader, StreamReader},
+            reader::StreamReader,
             writer::StreamWriter,
         },
     };
@@ -506,7 +503,7 @@ mod test {
         let log_records = log_record_batch.records(read_context);
         for record in log_records {
             let row = record.row;
-            print!("{}, {}\n", row.get_int(0), row.get_string(1))
+            println!("{}, {}", row.get_int(0), row.get_string(1))
         }
     }
 
