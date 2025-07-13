@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use arrow::array::{
-    AsArray, BinaryArray, FixedSizeBinaryArray, Float32Array, Float64Array, Int8Array,
-    Int16Array, Int32Array, Int64Array, RecordBatch, StringArray,
+    AsArray, BinaryArray, FixedSizeBinaryArray, Float32Array, Float64Array, Int8Array, Int16Array,
+    Int32Array, Int64Array, RecordBatch, StringArray,
 };
 
 pub trait InternalRow {

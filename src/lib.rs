@@ -4,6 +4,7 @@ pub mod admin;
 pub mod args;
 pub mod connection;
 pub mod metadata;
+pub mod new;
 pub mod record;
 mod rpc;
 mod table;
@@ -12,7 +13,6 @@ mod util;
 pub use self::error::{Error, Result};
 
 use prost::Message;
-
 
 // Include the `items` module, which is generated from items.proto.
 pub mod messages {

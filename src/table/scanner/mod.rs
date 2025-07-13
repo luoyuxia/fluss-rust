@@ -4,10 +4,7 @@ use log::LogScanner;
 
 use crate::{
     connection::Connections,
-    metadata::{
-        TableInfo,
-        metadata_updater::MetadataUpdater,
-    },
+    metadata::{TableInfo, metadata_updater::MetadataUpdater},
 };
 
 pub mod log;

@@ -113,7 +113,10 @@ impl AppendWriter {
         let leader_node = bucket_location.leader();
 
         let mut connections_guard = self.conn.lock().unwrap();
-        let con = connections_guard.get_conn(leader_node).await.unwrap();
+        let con = connections_guard
+            .get_conn(leader_node.as_ref().unwrap())
+            .await
+            .unwrap();
 
         let produce_request = build_produce_log_request(
             table_id,

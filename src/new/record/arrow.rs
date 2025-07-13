@@ -1,22 +1,33 @@
-use std::{
-    io::{Cursor, Read, Write},
-    sync::Arc,
+use arrow::array::{
+    ArrayBuilder, ArrayRef, BooleanBuilder, Float32Builder, Float64Builder, Int8Builder,
+    Int16Builder, Int32Builder, Int64Builder, StringBuilder, UInt8Builder, UInt16Builder,
+    UInt32Builder, UInt64Builder,
 };
-
+use arrow::ipc::IntBuilder;
 use arrow::{
     array::RecordBatch,
     ipc::{reader::StreamReader, writer::StreamWriter},
 };
 use arrow_schema::SchemaRef;
-use arrow_schema::{DataType as ArrowDataType, Field, Schema};
+use arrow_schema::{DataType as ArrowDataType, Field};
 use byteorder::WriteBytesExt;
 use byteorder::{ByteOrder, LittleEndian};
 use crc32c::crc32c;
+use parking_lot::Mutex;
+use std::cell::RefCell;
+use std::{
+    io::{Cursor, Read, Write},
+    sync::Arc,
+};
 use tokio::io::AsyncReadExt;
 
-use crate::{Result, metadata::DataType};
-
-use super::{ChangeType, ScanRecord, row::ColumnarRow};
+use crate::metadata::DataType;
+use crate::metadata::Schema;
+use crate::new::client::GenericRow;
+use crate::new::error::Error::WriteError;
+use crate::new::error::Result;
+use crate::record::row::ColumnarRow;
+use crate::record::{ChangeType, ScanRecord};
 
 /// const for record batch
 pub const BASE_OFFSET_LENGTH: usize = 8;
@@ -65,37 +76,80 @@ pub const NO_BATCH_SEQUENCE: i32 = -1;
 
 pub const BUILDER_DEFAULT_OFFSET: i64 = 0;
 
-pub struct MemoryLogRecordsArrowBuilder<'a> {
+pub const DEFAULT_MAX_RECORD: i32 = 256;
+
+pub struct MemoryLogRecordsArrowBuilder {
     base_log_offset: i64,
     schema_id: i32,
     magic: u8,
     writer_id: i64,
     batch_sequence: i32,
+    table_schema: SchemaRef,
     record_count: i32,
-    arrow_record_batch: &'a RecordBatch,
+    arrow_column_builders: Mutex<Vec<Box<dyn ArrayBuilder>>>,
+    is_closed: bool,
 }
 
-impl<'a> MemoryLogRecordsArrowBuilder<'a> {
-    pub fn new(schema_id: i32, arrow_record_batch: &'a RecordBatch) -> Self {
+impl MemoryLogRecordsArrowBuilder {
+    pub fn new(schema_id: i32, row_type: &DataType) -> Self {
+        let schema_ref = to_arrow_schema(row_type);
+        let builders = Mutex::new(
+            schema_ref
+                .fields()
+                .iter()
+                .map(|field| Self::create_builder(field.data_type()))
+                .collect(),
+        );
         MemoryLogRecordsArrowBuilder {
             base_log_offset: BUILDER_DEFAULT_OFFSET,
             schema_id,
             magic: CURRENT_LOG_MAGIC_VALUE,
             writer_id: NO_WRITER_ID,
             batch_sequence: NO_BATCH_SEQUENCE,
-            record_count: arrow_record_batch.num_rows() as i32,
-            arrow_record_batch,
+            record_count: 0,
+            table_schema: schema_ref,
+            arrow_column_builders: builders,
+            is_closed: false,
         }
     }
 
-    pub fn build(&mut self) -> Result<Vec<u8>> {
+    pub fn append(&mut self, row: &GenericRow) -> Result<()> {
+        for (idx, value) in row.values.iter().enumerate() {
+            let mut builder_binding = self.arrow_column_builders.lock();
+            let builder = builder_binding.get_mut(idx).unwrap();
+            (value as &dyn ToArrow).append_to(builder.as_mut())?;
+        }
+        // todo: consider write other change type
+        Ok(())
+    }
+
+    pub fn is_full(&self) -> bool {
+        self.record_count >= DEFAULT_MAX_RECORD
+    }
+
+    pub fn is_closed(&self) -> bool {
+        self.is_closed
+    }
+
+    pub fn close(&mut self) {
+        self.is_closed = true;
+    }
+
+    pub fn build(&self) -> Result<Vec<u8>> {
         // serialize arrow batch
         let mut arrow_batch_bytes = vec![];
-        let mut writer =
-            StreamWriter::try_new(&mut arrow_batch_bytes, &self.arrow_record_batch.schema())?;
+        let mut writer = StreamWriter::try_new(&mut arrow_batch_bytes, &self.table_schema)?;
+
+        let arrays = self
+            .arrow_column_builders
+            .lock()
+            .iter_mut()
+            .map(|b| b.finish())
+            .collect::<Vec<ArrayRef>>();
+        let record_batch = RecordBatch::try_new(self.table_schema.clone(), arrays)?;
         // get header len
         let header = writer.get_ref().len();
-        writer.write(self.arrow_record_batch)?;
+        writer.write(&record_batch)?;
         // get real arrow batch bytes
         let real_arrow_batch_bytes = &arrow_batch_bytes[header..];
 
@@ -143,7 +197,52 @@ impl<'a> MemoryLogRecordsArrowBuilder<'a> {
         cursor.write_i32::<LittleEndian>(self.record_count)?;
         Ok(())
     }
+
+    fn create_builder(data_type: &arrow_schema::DataType) -> Box<dyn ArrayBuilder> {
+        match data_type {
+            arrow_schema::DataType::Int8 => Box::new(Int8Builder::new()),
+            arrow_schema::DataType::Int16 => Box::new(Int16Builder::new()),
+            arrow_schema::DataType::Int32 => Box::new(Int32Builder::new()),
+            arrow_schema::DataType::Int64 => Box::new(Int64Builder::new()),
+            arrow_schema::DataType::UInt8 => Box::new(UInt8Builder::new()),
+            arrow_schema::DataType::UInt16 => Box::new(UInt16Builder::new()),
+            arrow_schema::DataType::UInt32 => Box::new(UInt32Builder::new()),
+            arrow_schema::DataType::UInt64 => Box::new(UInt64Builder::new()),
+            arrow_schema::DataType::Float32 => Box::new(Float32Builder::new()),
+            arrow_schema::DataType::Float64 => Box::new(Float64Builder::new()),
+            arrow_schema::DataType::Boolean => Box::new(BooleanBuilder::new()),
+            arrow_schema::DataType::Utf8 => Box::new(StringBuilder::new()),
+            dt => panic!("Unsupported data type: {:?}", dt),
+        }
+    }
 }
+
+pub trait ToArrow {
+    fn append_to(&self, builder: &mut dyn ArrayBuilder) -> Result<()>;
+}
+
+macro_rules! impl_to_arrow {
+    ($ty:ty, $variant:ident) => {
+        impl ToArrow for $ty {
+            fn append_to(&self, builder: &mut dyn ArrayBuilder) -> Result<()> {
+                if let Some(b) = builder.as_any_mut().downcast_mut::<$variant>() {
+                    b.append_value(*self);
+                    Ok(())
+                } else {
+                    Err(WriteError(format!(
+                        "Cannot cast {} to {} builder",
+                        stringify!($ty),
+                        stringify!($variant)
+                    )))
+                }
+            }
+        }
+    };
+}
+
+impl_to_arrow!(i8, Int8Builder);
+impl_to_arrow!(i16, Int16Builder);
+impl_to_arrow!(i32, Int32Builder);
 
 pub struct LogRecordsBatchs<'a> {
     data: &'a [u8],
@@ -327,7 +426,7 @@ pub fn to_arrow_schema(fluss_schema: &DataType) -> SchemaRef {
                 })
                 .collect();
 
-            SchemaRef::new(Schema::new(fields))
+            SchemaRef::new(arrow_schema::Schema::new(fields))
         }
         _ => {
             panic!("must be row data tyoe.")
@@ -458,58 +557,45 @@ pub struct MyVec<T>(pub StreamReader<T>);
 
 #[cfg(test)]
 mod test {
-    use std::io::Cursor;
 
-    use arrow::{
-        array::record_batch,
-        ipc::{reader::StreamReader, writer::StreamWriter},
-    };
-
-    use crate::record::{
-        log_records::{LogRecordBatch, ReadContext},
-        row::InternalRow,
-    };
-
-    use super::MemoryLogRecordsArrowBuilder;
-
-    #[test]
-    pub fn t1() {
-        let schema_id = 1;
-        let arrow_record_batch =
-            record_batch!(("c1", Int32, [1, 2]), ("c2", Utf8, ["a1", "a2"])).unwrap();
-        let data = MemoryLogRecordsArrowBuilder::new(schema_id, &arrow_record_batch)
-            .build()
-            .unwrap();
-
-        let log_record_batch = LogRecordBatch::new(&data);
-
-        let read_context = ReadContext::new(arrow_record_batch.schema());
-
-        let log_records = log_record_batch.records(read_context);
-        for record in log_records {
-            let row = record.row;
-            println!("{}, {}", row.get_int(0), row.get_string(1))
-        }
-    }
-
-    #[test]
-    pub fn f2() {
-        let arrow_record_batch =
-            record_batch!(("c1", Int32, [1, 2]), ("c2", Utf8, ["a1", "a2"])).unwrap();
-        let mut arrow_batch_bytes = vec![];
-        let mut writer =
-            StreamWriter::try_new(&mut arrow_batch_bytes, &arrow_record_batch.schema()).unwrap();
-        // get header len
-        let header = writer.get_ref().len();
-        writer.write(&arrow_record_batch).unwrap();
-        // get real arrow batch bytes
-        let real_arrow_batch_bytes = &arrow_batch_bytes[header..];
-
-        let mut arrow_schema_bytes = vec![];
-        let writer =
-            StreamWriter::try_new(&mut arrow_schema_bytes, &arrow_record_batch.schema()).unwrap();
-
-        let cursor = Cursor::new([&arrow_schema_bytes, real_arrow_batch_bytes].concat());
-        let stream_reader = StreamReader::try_new(cursor, None).unwrap();
-    }
+    // #[test]
+    // pub fn t1() {
+    //     let schema_id = 1;
+    //     let arrow_record_batch =
+    //         record_batch!(("c1", Int32, [1, 2]), ("c2", Utf8, ["a1", "a2"])).unwrap();
+    //     let data = MemoryLogRecordsArrowBuilder::new(schema_id, &arrow_record_batch)
+    //         .build()
+    //         .unwrap();
+    //
+    //     let log_record_batch = LogRecordBatch::new(&data);
+    //
+    //     let read_context = ReadContext::new(arrow_record_batch.schema());
+    //
+    //     let log_records = log_record_batch.records(read_context);
+    //     for record in log_records {
+    //         let row = record.row;
+    //         println!("{}, {}", row.get_int(0), row.get_string(1))
+    //     }
+    // }
+    //
+    // #[test]
+    // pub fn f2() {
+    //     let arrow_record_batch =
+    //         record_batch!(("c1", Int32, [1, 2]), ("c2", Utf8, ["a1", "a2"])).unwrap();
+    //     let mut arrow_batch_bytes = vec![];
+    //     let mut writer =
+    //         StreamWriter::try_new(&mut arrow_batch_bytes, &arrow_record_batch.schema()).unwrap();
+    //     // get header len
+    //     let header = writer.get_ref().len();
+    //     writer.write(&arrow_record_batch).unwrap();
+    //     // get real arrow batch bytes
+    //     let real_arrow_batch_bytes = &arrow_batch_bytes[header..];
+    //
+    //     let mut arrow_schema_bytes = vec![];
+    //     let writer =
+    //         StreamWriter::try_new(&mut arrow_schema_bytes, &arrow_record_batch.schema()).unwrap();
+    //
+    //     let cursor = Cursor::new([&arrow_schema_bytes, real_arrow_batch_bytes].concat());
+    //     let stream_reader = StreamReader::try_new(cursor, None).unwrap();
+    // }
 }

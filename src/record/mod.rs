@@ -72,7 +72,7 @@ impl fmt::Display for ChangeType {
 }
 
 pub struct ScanRecord {
-    row: ColumnarRow,
+    pub row: ColumnarRow,
     offset: i64,
     timestamp: i64,
     change_type: ChangeType,

@@ -1450,6 +1450,15 @@ pub struct TableInfo {
     pub modified_time: i64,
 }
 
+impl TableInfo {
+    pub fn row_type(&self) -> &RowType {
+        match &self.row_type {
+            DataType::Row(row_type) => row_type,
+            _ => panic!("should be a row type"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TableConfig {
     pub properties: HashMap<String, String>,

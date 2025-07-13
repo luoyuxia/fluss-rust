@@ -1,0 +1,123 @@
+use crate::metadata::TablePath;
+use crate::new::args::Config;
+use crate::new::client::metadata::Metadata;
+use crate::new::client::write::accumulator::RecordAccumulator;
+use crate::new::client::write::bucket_assigner::{BucketAssigner, StickyBucketAssigner};
+use crate::new::client::write::sender::Sender;
+use crate::new::client::write::{ResultHandle, WriteRecord};
+use crate::new::error::{Error, Result};
+use dashmap::DashMap;
+use std::sync::Arc;
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
+
+pub struct WriterClient {
+    config: &'static Config,
+    max_request_size: i32,
+    accumulate: Arc<RecordAccumulator>,
+    shutdown_tx: mpsc::Sender<()>,
+    sender_join_handle: JoinHandle<()>,
+    metadata: Arc<Metadata>,
+    bucket_assigners: DashMap<TablePath, Arc<Box<dyn BucketAssigner>>>,
+}
+
+impl WriterClient {
+    pub fn new(config: &'static Config, metadata: Arc<Metadata>) -> Result<Self> {
+        let (shutdown_tx, mut shutdown_rx) = mpsc::channel(1);
+
+        let accumulator = Arc::new(RecordAccumulator::new(config));
+
+        let mut sender = Sender::new(
+            metadata.clone(),
+            accumulator.clone(),
+            config.request_max_size,
+            30_000,
+            Self::get_ack(config)?,
+            config.writer_retries,
+        );
+
+        let join_handle = tokio::spawn(async move {
+            tokio::select! {
+                _ = sender.run() => {
+                    // do-nothing
+                },
+                _ = shutdown_rx.recv() => {
+                    sender.close().await
+                }
+            }
+        });
+
+        Ok(Self {
+            max_request_size: config.request_max_size,
+            config,
+            shutdown_tx,
+            sender_join_handle: join_handle,
+            accumulate: accumulator,
+            metadata,
+            bucket_assigners: Default::default(),
+        })
+    }
+
+    fn get_ack(config: &Config) -> Result<i16> {
+        let acks = config.writer_acks.as_str();
+        if acks.eq("all") {
+            Ok(-1)
+        } else {
+            acks.parse::<i16>()
+                .map_err(|e| Error::IllegalArgument(e.to_string()))
+        }
+    }
+
+    pub async fn send(&self, record: &WriteRecord) -> Result<ResultHandle> {
+        let table_path = &record.table_path;
+        let cluster = self.metadata.get_cluster().await;
+
+        let bucket_assigner = {
+            if let Some(assigner) = self.bucket_assigners.get(&table_path) {
+                assigner.clone()
+            } else {
+                let assigner = Arc::new(Self::create_bucket_assigner(table_path.as_ref()));
+                self.bucket_assigners
+                    .insert(table_path.as_ref().clone(), assigner.clone());
+                assigner
+            }
+        };
+
+        let bucket_id = bucket_assigner.assign_bucket(None, &cluster);
+
+        let mut result = self.accumulate.append(record, 1, &cluster, true).await?;
+
+        if result.abort_record_for_new_batch {
+            let prev_bucket_id = bucket_id;
+            bucket_assigner.on_new_batch(&cluster, prev_bucket_id);
+            let bucket_id = bucket_assigner.assign_bucket(None, &cluster);
+            result = self
+                .accumulate
+                .append(record, bucket_id, &cluster, false)
+                .await?;
+        }
+
+        if result.batch_is_full || result.new_batch_created {
+            // todo: wakeup
+        }
+
+        Ok(result.result_handle.expect("result_handle should exist"))
+    }
+
+    pub async fn close(self) -> Result<()> {
+        self.shutdown_tx
+            .send(())
+            .await
+            .map_err(|e| Error::WriteError(e.to_string()))?;
+
+        self.sender_join_handle
+            .await
+            .map_err(|e| Error::WriteError(e.to_string()))?;
+        Ok(())
+    }
+
+    pub fn create_bucket_assigner(table_path: &TablePath) -> Box<dyn BucketAssigner> {
+        // always sticky
+        Box::new(StickyBucketAssigner::new(table_path.clone()))
+    }
+}

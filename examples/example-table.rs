@@ -46,7 +46,11 @@ pub async fn main() -> Result<()> {
     // 3: append log to the table
     let table = conn.get_table(&table_path).await;
     let append_writer = table.new_append().create_writer();
-    let batch = record_batch!(("c1", Int32, [1, 2, 3, 4, 5, 6]), ("c2", Utf8, ["a1", "a2", "a3", "a4", "a5", "a6"])).unwrap();
+    let batch = record_batch!(
+        ("c1", Int32, [1, 2, 3, 4, 5, 6]),
+        ("c2", Utf8, ["a1", "a2", "a3", "a4", "a5", "a6"])
+    )
+    .unwrap();
     append_writer.append(batch).await?;
     println!("Start to scan log records......");
     // 4: scan the records

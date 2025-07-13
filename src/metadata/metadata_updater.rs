@@ -6,6 +6,8 @@ use std::{
 
 use rand::random_range;
 
+use super::{TableBucket, TableDescriptor, TableInfo, metadata_serde::JsonSerde};
+use crate::new::BucketId;
 use crate::{
     Result,
     connection::{ConnectionConfig, Connections, ServerNode, ServerType},
@@ -13,8 +15,6 @@ use crate::{
     metadata::TablePath,
     rpc::{build_metadata_request, from_pb_server_node, from_pb_table_path},
 };
-
-use super::{TableBucket, TableDescriptor, TableInfo, metadata_serde::JsonSerde};
 
 const UNKOWN_TABLE_ID: i64 = -1;
 
@@ -38,8 +38,7 @@ impl Cluster {
         table_id_by_path: HashMap<TablePath, i64>,
         table_info_by_path: HashMap<TablePath, TableInfo>,
     ) -> Self {
-        let alive_tablet_servers = alive_tablet_servers_by_id.values().cloned()
-            .collect();
+        let alive_tablet_servers = alive_tablet_servers_by_id.values().cloned().collect();
         let table_path_by_id = table_id_by_path
             .iter()
             .map(|(path, table_id)| (*table_id, path.clone()))
@@ -143,7 +142,9 @@ impl Cluster {
             servers.insert(server_id, server_node);
         }
 
-        let coordinator_server = metadata_response.coordinator_server.map(|node| from_pb_server_node(node, ServerType::CoordinatorServer));
+        let coordinator_server = metadata_response
+            .coordinator_server
+            .map(|node| from_pb_server_node(node, ServerType::CoordinatorServer));
 
         let mut table_id_by_path = HashMap::new();
         let mut table_info_by_path = HashMap::new();
@@ -179,7 +180,8 @@ impl Cluster {
                 // what if server can't found?
                 let leader_server_node = servers.get(&leader_id).unwrap().clone();
                 let bucket = TableBucket::new(table_id, bucket_id);
-                let bucket_location = BucketLocation::new(bucket, leader_server_node);
+                let bucket_location =
+                    BucketLocation::new(bucket, Some(leader_server_node), table_path.clone());
                 locations.push(bucket_location);
             }
             table_locations.insert(table_path, locations);
@@ -303,25 +305,34 @@ impl MetadataUpdater {
 }
 
 #[derive(Debug, Clone)]
-
 pub struct BucketLocation {
-    table_bucket: TableBucket,
-    leader: ServerNode,
+    pub table_bucket: TableBucket,
+    leader: Option<ServerNode>,
+    pub table_path: TablePath,
 }
 
 impl BucketLocation {
-    pub fn new(table_bucket: TableBucket, leader: ServerNode) -> BucketLocation {
+    pub fn new(
+        table_bucket: TableBucket,
+        leader: Option<ServerNode>,
+        table_path: TablePath,
+    ) -> BucketLocation {
         BucketLocation {
             table_bucket,
             leader,
+            table_path,
         }
     }
 
-    pub fn leader(&self) -> &ServerNode {
+    pub fn leader(&self) -> &Option<ServerNode> {
         &self.leader
     }
 
     pub fn table_bucket(&self) -> &TableBucket {
         &self.table_bucket
+    }
+
+    pub fn bucket_id(&self) -> BucketId {
+        self.table_bucket.bucket
     }
 }

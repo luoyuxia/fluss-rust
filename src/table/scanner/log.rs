@@ -5,7 +5,6 @@ use std::{
     time::Duration,
 };
 
-
 const LOG_FETCH_MAX_BYTES: i32 = 16 * 1024 * 1024;
 const LOG_FETCH_MAX_BYTES_FOR_BUCKET: i32 = 1024;
 const LOG_FETCH_MIN_BYTES: i32 = 1;
@@ -213,6 +212,8 @@ impl LogFetcher {
             .unwrap()
             .get_bucket_localtion(tb)
             .leader()
+            .as_ref()
+            .unwrap()
             .id()
     }
 }
