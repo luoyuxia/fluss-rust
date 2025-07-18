@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
 pub struct WriterClient {
-    config: &'static Config,
+    config: Config,
     max_request_size: i32,
     accumulate: Arc<RecordAccumulator>,
     shutdown_tx: mpsc::Sender<()>,
@@ -22,17 +22,17 @@ pub struct WriterClient {
 }
 
 impl WriterClient {
-    pub fn new(config: &'static Config, metadata: Arc<Metadata>) -> Result<Self> {
+    pub fn new(config: Config, metadata: Arc<Metadata>) -> Result<Self> {
         let (shutdown_tx, mut shutdown_rx) = mpsc::channel(1);
 
-        let accumulator = Arc::new(RecordAccumulator::new(config));
+        let accumulator = Arc::new(RecordAccumulator::new(config.clone()));
 
         let mut sender = Sender::new(
             metadata.clone(),
             accumulator.clone(),
             config.request_max_size,
             30_000,
-            Self::get_ack(config)?,
+            Self::get_ack(&config)?,
             config.writer_retries,
         );
 

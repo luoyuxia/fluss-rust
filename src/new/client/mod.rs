@@ -2,7 +2,7 @@ use crate::record::row::InternalRow;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 mod admin;
-mod connection;
+pub mod connection;
 mod metadata;
 pub mod table;
 pub mod write;

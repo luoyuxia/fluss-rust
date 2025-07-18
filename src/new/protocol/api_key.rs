@@ -4,6 +4,7 @@ use crate::new::protocol::api_key::ApiKey::Unknown;
 pub enum ApiKey {
     CreateTable,
     ProduceLog,
+    MetaData,
     Unknown(i16),
 }
 
@@ -12,6 +13,7 @@ impl From<i16> for ApiKey {
         match key {
             1005 => ApiKey::CreateTable,
             1014 => ApiKey::ProduceLog,
+            1012 => ApiKey::MetaData,
             _ => Unknown(key),
         }
     }
@@ -22,6 +24,7 @@ impl From<ApiKey> for i16 {
         match key {
             ApiKey::CreateTable => 1005,
             ApiKey::ProduceLog => 1014,
+            ApiKey::MetaData => 1012,
             Unknown(x) => x,
         }
     }

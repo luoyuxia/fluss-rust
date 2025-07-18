@@ -3,10 +3,12 @@ use crate::new::protocol::api_key::ApiKey;
 use crate::new::protocol::api_version::ApiVersion;
 use crate::new::protocol::message::header::ReadVersionedError;
 use bytes::{Buf, BufMut};
+use prost::Message;
 use std::io::{Read, Write};
 
 mod create_table;
 pub mod header;
+pub mod update_metadata;
 pub mod write;
 
 pub trait WriteVersionedType<W>: Sized

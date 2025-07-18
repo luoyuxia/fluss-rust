@@ -58,8 +58,14 @@ impl Sender {
         // Update metadata if needed
         if !ready_check_result.unknown_leader_tables.is_empty() {
             self.metadata
-                .update_table_metadata(&ready_check_result.unknown_leader_tables)
-                .await;
+                .update_tables_metadata(
+                    &ready_check_result
+                        .unknown_leader_tables
+                        .iter()
+                        .map(|path| path)
+                        .collect(),
+                )
+                .await?;
         }
 
         if ready_check_result.ready_nodes.is_empty() {

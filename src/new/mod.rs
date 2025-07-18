@@ -1,12 +1,12 @@
-mod args;
-mod backoff;
-mod client;
-mod common;
-mod connection;
+pub mod args;
+pub mod backoff;
+pub mod client;
+pub mod common;
+pub mod connection;
 pub mod error;
 mod messenger;
 pub mod protocol;
-mod record;
+pub mod record;
 
 pub type TableId = u64;
 pub type PartitionId = u64;

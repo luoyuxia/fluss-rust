@@ -3,8 +3,11 @@ use crate::new::protocol::api_key::ApiKey;
 use crate::new::protocol::api_version::ApiVersion;
 use crate::new::protocol::frame::ReadError;
 use crate::new::protocol::message::{ReadVersionedType, WriteVersionedType};
-use bytes::{Buf, BufMut};
+use bytes::{Buf, BufMut, BytesMut};
+use std::io::Bytes;
+use std::io::{self, Read, Write};
 use thiserror::Error;
+const REQUEST_HEADER_LENGTH: i32 = 8;
 
 #[derive(Error, Debug)]
 #[non_exhaustive]
@@ -34,7 +37,11 @@ where
         writer: &mut W,
         version: ApiVersion,
     ) -> Result<(), WriteVersionedError> {
-        todo!()
+        // writer.put_i32(frame_size);
+        writer.put_i16(1012);
+        writer.put_i16(self.request_api_version.0);
+        writer.put_i32(self.request_id);
+        Ok(())
     }
 }
 

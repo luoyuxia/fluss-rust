@@ -1,3 +1,4 @@
+use crate::connection::ServerNode;
 use crate::new::connection::transport::Transport;
 use crate::new::error::Error::ConnectionError;
 use crate::new::error::Result;
@@ -13,27 +14,6 @@ pub type MessengerTransport = Messenger<BufStream<Transport>>;
 
 pub type ServerConnection = Arc<MessengerTransport>;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ServerType {
-    TabletServer,
-    CoordinatorServer,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ServerNode {
-    pub id: i32,
-    pub uid: String,
-    host: String,
-    port: u32,
-    server_type: ServerType,
-}
-
-impl ServerNode {
-    pub fn url(&self) -> String {
-        format!("{}:{}", self.host, self.port)
-    }
-}
-
 pub enum ServerRepresentation {
     Bootstrap(String),
 
@@ -45,7 +25,7 @@ impl ServerRepresentation {
     fn id(&self) -> Option<i32> {
         match self {
             Self::Bootstrap(_) => None,
-            Self::Cluster(server) => Some(server.id),
+            Self::Cluster(server) => Some(server.id()),
         }
     }
 
@@ -99,15 +79,13 @@ impl Connections {
     }
 
     pub async fn get_connection(&self, server_node: &ServerNode) -> Result<ServerConnection> {
-        let server_id = &server_node.uid;
+        let server_id = server_node.uid();
         {
             let connections = self.connections.read();
             if let Some(connection) = connections.get(server_id) {
                 return Ok(connection.clone());
             }
         }
-
-        //
         let server_connection = ServerRepresentation::Cluster(server_node.clone())
             .connect(self.client_id.clone(), self.timeout, self.max_message_size)
             .await?;

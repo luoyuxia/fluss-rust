@@ -1,6 +1,8 @@
-use crate::connection::FlussConnection;
 use crate::metadata::{TableInfo, TablePath};
+use crate::new::client::connection::FlussConnection;
+use crate::new::client::metadata::Metadata;
 use crate::new::client::table::append::TableAppend;
+use crate::new::error::Result;
 use std::sync::Arc;
 
 mod append;
@@ -8,20 +10,22 @@ mod append;
 mod table;
 mod writer;
 
-pub struct FlussTable {
-    conn: Arc<FlussConnection>,
+pub struct FlussTable<'a> {
+    conn: &'a FlussConnection,
+    metadata: Arc<Metadata>,
     table_info: TableInfo,
     table_path: TablePath,
     has_primary_key: bool,
 }
 
-impl FlussTable {
-    pub fn new(conn: Arc<FlussConnection>, table_info: TableInfo) -> Self {
+impl<'a> FlussTable<'a> {
+    pub fn new(conn: &'a FlussConnection, metadata: Arc<Metadata>, table_info: TableInfo) -> Self {
         FlussTable {
             conn,
             table_path: table_info.table_path.clone(),
             has_primary_key: table_info.has_primary_key(),
             table_info,
+            metadata,
         }
     }
 
@@ -29,12 +33,16 @@ impl FlussTable {
         &self.table_info
     }
 
-    pub fn new_append(&self) -> TableAppend {
-        todo!()
+    pub fn new_append(&self) -> Result<TableAppend> {
+        Ok(TableAppend::new(
+            self.table_path.clone(),
+            self.table_info.clone(),
+            self.conn.get_or_create_writer_client()?,
+        ))
     }
 }
 
-impl Drop for FlussTable {
+impl<'a> Drop for FlussTable<'a> {
     fn drop(&mut self) {
         // do-nothing now
     }

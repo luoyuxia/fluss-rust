@@ -1,3 +1,4 @@
+use crate::connection::ServerNode;
 use crate::metadata::metadata_updater::BucketLocation;
 use crate::metadata::{TableBucket, TablePath};
 use crate::new::args::Config;
@@ -6,7 +7,6 @@ use crate::new::client::metadata::Cluster;
 use crate::new::client::write::batch::WriteBatch::ArrowLog;
 use crate::new::client::write::batch::{ArrowLogWriteBatch, WriteBatch};
 use crate::new::client::write::{ResultHandle, WriteRecord};
-use crate::new::connection::connection::ServerNode;
 use crate::new::error::Result;
 use crate::new::{BucketId, PartitionId, TableId};
 use arrow::array::{Array, Datum};
@@ -16,7 +16,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub struct RecordAccumulator {
-    config: &'static Config,
+    config: Config,
     write_batches: DashMap<TablePath, BucketAndWriteBatches>,
     batch_timeout_ms: i64,
     closed: bool,
@@ -26,7 +26,7 @@ pub struct RecordAccumulator {
 }
 
 impl RecordAccumulator {
-    pub fn new(config: &'static Config) -> Self {
+    pub fn new(config: Config) -> Self {
         RecordAccumulator {
             config,
             write_batches: Default::default(),
@@ -227,7 +227,7 @@ impl RecordAccumulator {
                 .drain_batches_for_one_node(&cluster, &node, max_size)
                 .await?;
             if !ready.is_empty() {
-                batches.insert(node.id, ready);
+                batches.insert(node.id(), ready);
             }
         }
 
@@ -249,7 +249,7 @@ impl RecordAccumulator {
         }
 
         let mut nodes_drain_index_guard = self.nodes_drain_index.lock().await;
-        let drain_index = nodes_drain_index_guard.entry(node.id).or_insert(0);
+        let drain_index = nodes_drain_index_guard.entry(node.id()).or_insert(0);
         let start = *drain_index % buckets.len();
         let mut current_index = start;
 
@@ -257,7 +257,7 @@ impl RecordAccumulator {
             let bucket = &buckets[current_index];
             let table_path = bucket.table_path.clone();
             let table_bucket = bucket.table_bucket.clone();
-            nodes_drain_index_guard.insert(node.id, current_index);
+            nodes_drain_index_guard.insert(node.id(), current_index);
             current_index = (current_index + 1) % buckets.len();
 
             let bucket_and_write_batches = self.write_batches.get(&table_path);
@@ -312,7 +312,7 @@ impl RecordAccumulator {
         for (_, bucket_locations) in cluster.get_bucket_locations_by_path() {
             for bucket_location in bucket_locations {
                 if let Some(leader) = bucket_location.leader() {
-                    if current.id == leader.id() {
+                    if current.id() == leader.id() {
                         buckets.push(bucket_location.clone());
                     }
                 }

@@ -9,6 +9,7 @@ use std::{
 };
 
 use byteorder::{BigEndian, WriteBytesExt};
+use clap::builder::Str;
 use prost::Message;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
@@ -137,17 +138,24 @@ pub struct ServerNode {
 
 impl ServerNode {
     pub fn new(id: i32, host: String, port: u32, server_type: ServerType) -> ServerNode {
-        let uid = match server_type {
-            ServerType::TabletServer => format!("cs-{}", id),
-            ServerType::CoordinatorServer => format!("ts-{}", id),
-        };
         ServerNode {
             id,
-            uid,
+            uid: match server_type {
+                ServerType::CoordinatorServer => format!("cs-{}", id),
+                ServerType::TabletServer => format!("ts-{}", id),
+            },
             host,
             port,
             server_type,
         }
+    }
+
+    pub fn uid(&self) -> &String {
+        &self.uid
+    }
+
+    pub fn url(&self) -> String {
+        format!("{}:{}", self.host, self.port)
     }
 
     pub fn id(&self) -> i32 {

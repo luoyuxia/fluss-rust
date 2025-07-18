@@ -14,7 +14,7 @@ use fluss_rust::{
 pub async fn main() -> Result<()> {
     // 1: create the table;
     let mut args = Args::default();
-    args.bootstrap_server = "127.0.0.1:9123".to_string();
+    args.bootstrap_server = "127.0.0.1:59633".to_string();
     let conn_config = ConnectionConfig::from_args(args);
     let conn = FlussConnection::new(conn_config).await;
 
