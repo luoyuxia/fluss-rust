@@ -8,6 +8,9 @@ use std::io::Bytes;
 use std::io::{self, Read, Write};
 use thiserror::Error;
 const REQUEST_HEADER_LENGTH: i32 = 8;
+const SUCCESS_RESPONSE: u8 = 0;
+const ERROR_RESPONSE: u8 = 1;
+const SERVER_FAILURE: u8 = 2;
 
 #[derive(Error, Debug)]
 #[non_exhaustive]
@@ -37,8 +40,7 @@ where
         writer: &mut W,
         version: ApiVersion,
     ) -> Result<(), WriteVersionedError> {
-        // writer.put_i32(frame_size);
-        writer.put_i16(1012);
+        writer.put_i16(self.request_api_key.into());
         writer.put_i16(self.request_api_version.0);
         writer.put_i32(self.request_id);
         Ok(())
@@ -55,6 +57,9 @@ where
     R: Buf,
 {
     fn read_versioned(reader: &mut R, version: ApiVersion) -> Result<Self, ReadVersionedError> {
-        todo!()
+        let resp_type = reader.get_u8();
+        // todo: handle when resp_type is not success
+        let request_id = reader.get_i32();
+        Ok(ResponseHeader { request_id })
     }
 }

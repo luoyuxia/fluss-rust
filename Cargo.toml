@@ -22,6 +22,11 @@ tokio = { version = "1.44.2", features = ["full"] }
 parking_lot = "0.12"
 bytes = "1.10.1"
 dashmap = "6.1.0"
+rust_decimal = "1"
+ordered-float = { version = "4", features = ["serde"] }
+parse-display = "0.10"
+ref-cast = "1.0"
+chrono = { version = "0.4", features = ["clock", "std", "wasmbind"] }
 
 [build-dependencies]
 prost-build = "0.13.5"

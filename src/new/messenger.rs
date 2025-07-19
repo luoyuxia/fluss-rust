@@ -1,3 +1,4 @@
+use crate::new::error::Result;
 use crate::new::protocol::api_key::ApiKey;
 use crate::new::protocol::api_version::ApiVersion;
 use crate::new::protocol::message::header::{ReadVersionedError, RequestHeader, ResponseHeader};
@@ -146,7 +147,7 @@ where
                         // message was read, so all subsequent errors should not poison the whole stream
                         let mut cursor = Cursor::new(msg);
 
-                        let mut header =
+                        let header =
                             match ResponseHeader::read_versioned(&mut cursor, ApiVersion(0)) {
                                 Ok(header) => header,
                                 Err(e) => {
@@ -223,7 +224,7 @@ where
         let header = RequestHeader {
             request_api_key: R::API_KEY,
             request_api_version: ApiVersion(0),
-            request_id: request_id,
+            request_id,
             client_id: Some(String::from(self.client_id.as_ref())),
         };
 

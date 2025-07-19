@@ -13,6 +13,7 @@ use rand::random_range;
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use std::sync::Arc;
+static EMPTY: Vec<BucketLocation> = Vec::new();
 
 #[derive(Default)]
 pub struct Cluster {
@@ -158,20 +159,30 @@ impl Cluster {
         )
     }
 
+    pub fn get_coordinator_server(&self) -> Option<&ServerNode> {
+        self.coordinator_server.as_ref()
+    }
+
     pub fn leader_for(&self, table_bucket: &TableBucket) -> Option<&ServerNode> {
-        todo!()
+        let location = self.available_locations_by_bucket.get(table_bucket);
+        if let Some(location) = location {
+            location.leader().as_ref()
+        } else {
+            None
+        }
     }
 
-    pub fn get_tablet_server(&self) -> Option<ServerNode> {
-        todo!()
+    pub fn get_tablet_server(&self, id: i32) -> Option<&ServerNode> {
+        self.alive_tablet_servers_by_id.get(&id)
     }
 
-    pub fn get_table_bucket(&self, table_path: &TablePath, bucket_id: BucketId) -> &TableBucket {
-        todo!()
+    pub fn get_table_bucket(&self, table_path: &TablePath, bucket_id: BucketId) -> TableBucket {
+        let table_info = self.get_table(table_path);
+        TableBucket::new(table_info.table_id, bucket_id)
     }
 
     pub fn get_bucket_locations_by_path(&self) -> &HashMap<TablePath, Vec<BucketLocation>> {
-        todo!()
+        &self.available_locations_by_path
     }
 
     pub fn get_table_info_by_path(&self) -> &HashMap<TablePath, TableInfo> {
@@ -185,8 +196,10 @@ impl Cluster {
     pub fn get_available_buckets_for_table_path(
         &self,
         table_path: &TablePath,
-    ) -> Vec<BucketLocation> {
-        todo!()
+    ) -> &Vec<BucketLocation> {
+        self.available_locations_by_path
+            .get(table_path)
+            .unwrap_or(&EMPTY)
     }
 
     pub fn get_one_available_server(&self) -> &ServerNode {
@@ -201,11 +214,20 @@ impl Cluster {
     }
 
     pub fn get_bucket_count(&self, table_path: &TablePath) -> i32 {
-        todo!()
+        self.table_info_by_path
+            .get(table_path)
+            .expect(format!("can't not table info by path {}", table_path).as_str())
+            .num_buckets
     }
 
     pub fn get_table(&self, table_path: &TablePath) -> &TableInfo {
-        todo!()
+        self.table_info_by_path
+            .get(table_path)
+            .expect(format!("can't find table info by path {}", table_path).as_str())
+    }
+
+    pub fn opt_get_table(&self, table_path: &TablePath) -> Option<&TableInfo> {
+        self.table_info_by_path.get(table_path)
     }
 }
 
@@ -247,8 +269,8 @@ impl Metadata {
     }
 
     pub async fn update(&self, metadata_response: MetadataResponse) {
-        let mut cluster = self.cluster.write();
         let origin_cluster = self.cluster.read().clone();
+        let mut cluster = self.cluster.write();
         *cluster = Arc::new(Cluster::from_metadata_response(
             metadata_response,
             Some(&origin_cluster),
@@ -273,20 +295,28 @@ impl Metadata {
             .await
     }
 
+    pub async fn check_and_update_table_metadata(&self, table_paths: &[TablePath]) -> Result<()> {
+        let cluster_binding = self.cluster.read();
+        let need_update_table_paths: HashSet<&TablePath> = table_paths
+            .iter()
+            .filter(|table_path| cluster_binding.opt_get_table(table_path).is_none())
+            .collect();
+        if !need_update_table_paths.is_empty() {
+            let _ = self.update_tables_metadata(&need_update_table_paths).await;
+        }
+        Ok(())
+    }
+
     pub async fn get_connection(&self, server_node: &ServerNode) -> Result<ServerConnection> {
         self.connections.get_connection(server_node).await
     }
 
-    pub async fn get_cluster(&self) -> Arc<Cluster> {
+    pub fn get_cluster(&self) -> Arc<Cluster> {
         let guard = self.cluster.read();
         guard.clone()
     }
 
     pub fn leader_for(&self, table_bucket: &TableBucket) -> Option<&ServerNode> {
-        todo!()
-    }
-
-    pub fn get_tablet_server(&self, server_id: i32) -> Option<&ServerNode> {
         todo!()
     }
 }

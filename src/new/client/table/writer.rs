@@ -20,7 +20,7 @@ pub trait UpsertWriter: TableWriter {
 }
 
 pub struct AbstractTableWriter {
-    table_path: Rc<TablePath>,
+    table_path: Arc<TablePath>,
     writer_client: Arc<WriterClient>,
     field_count: i32,
 }
@@ -33,14 +33,14 @@ impl AbstractTableWriter {
     ) -> Self {
         // todo: partition
         Self {
-            table_path: Rc::new(table_path),
+            table_path: Arc::new(table_path),
             writer_client,
             field_count: table_info.row_type().fields().len() as i32,
         }
     }
 
-    pub async fn send(&self, write_record: &WriteRecord) -> Result<()> {
-        let mut result_handle = self.writer_client.send(&write_record).await?;
+    pub async fn send(&self, write_record: &WriteRecord<'_>) -> Result<()> {
+        let result_handle = self.writer_client.send(&write_record).await?;
         let result = result_handle.wait().await?;
         result_handle.result(result)
     }
@@ -58,7 +58,7 @@ pub struct AppendWriterImpl {
 }
 
 impl AppendWriterImpl {
-    pub async fn append(&self, row: GenericRow) -> Result<()> {
+    pub async fn append(&self, row: GenericRow<'_>) -> Result<()> {
         let record = WriteRecord::new(self.base.table_path.clone(), row);
         self.base.send(&record).await
     }

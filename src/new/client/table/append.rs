@@ -3,7 +3,6 @@ use crate::new::client::GenericRow;
 use crate::new::client::write::WriteRecord;
 use crate::new::client::write::writer_client::WriterClient;
 use crate::new::error::Result;
-use std::rc::Rc;
 use std::sync::Arc;
 
 pub struct TableAppend {
@@ -27,22 +26,26 @@ impl TableAppend {
 
     pub fn create_writer(&self) -> AppendWriter {
         AppendWriter {
-            table_path: Rc::new(self.table_path.clone()),
+            table_path: Arc::new(self.table_path.clone()),
             writer_client: self.writer_client.clone(),
         }
     }
 }
 
 pub struct AppendWriter {
-    table_path: Rc<TablePath>,
+    table_path: Arc<TablePath>,
     writer_client: Arc<WriterClient>,
 }
 
 impl AppendWriter {
-    pub async fn append(&self, row: GenericRow) -> Result<()> {
+    pub async fn append(&self, row: GenericRow<'_>) -> Result<()> {
         let record = WriteRecord::new(self.table_path.clone(), row);
-        let mut result_handle = self.writer_client.send(&record).await?;
+        let result_handle = self.writer_client.send(&record).await?;
         let result = result_handle.wait().await?;
         result_handle.result(result)
+    }
+
+    pub async fn flush(&self) -> Result<()> {
+        self.writer_client.flush().await
     }
 }

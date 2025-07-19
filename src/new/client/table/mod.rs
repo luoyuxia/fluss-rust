@@ -2,12 +2,13 @@ use crate::metadata::{TableInfo, TablePath};
 use crate::new::client::connection::FlussConnection;
 use crate::new::client::metadata::Metadata;
 use crate::new::client::table::append::TableAppend;
+use crate::new::client::table::scanner::TableScan;
 use crate::new::error::Result;
 use std::sync::Arc;
 
 mod append;
 
-mod table;
+mod scanner;
 mod writer;
 
 pub struct FlussTable<'a> {
@@ -39,6 +40,10 @@ impl<'a> FlussTable<'a> {
             self.table_info.clone(),
             self.conn.get_or_create_writer_client()?,
         ))
+    }
+
+    pub fn new_scan(&self) -> TableScan {
+        TableScan::new(&self.conn, self.table_info.clone(), self.metadata.clone())
     }
 }
 

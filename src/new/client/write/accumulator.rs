@@ -11,18 +11,23 @@ use crate::new::error::Result;
 use crate::new::{BucketId, PartitionId, TableId};
 use arrow::array::{Array, Datum};
 use dashmap::DashMap;
+use parking_lot::RwLock;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicI32, AtomicI64, Ordering};
 use tokio::sync::Mutex;
 
 pub struct RecordAccumulator {
     config: Config,
     write_batches: DashMap<TablePath, BucketAndWriteBatches>,
+    // batch_id -> complete callback
+    incomplete_batches: RwLock<HashMap<i64, ResultHandle>>,
     batch_timeout_ms: i64,
     closed: bool,
-    flushes_in_progress: i32,
+    flushes_in_progress: AtomicI32,
     appends_in_progress: i32,
     nodes_drain_index: Mutex<HashMap<i32, usize>>,
+    batch_id: AtomicI64,
 }
 
 impl RecordAccumulator {
@@ -30,11 +35,13 @@ impl RecordAccumulator {
         RecordAccumulator {
             config,
             write_batches: Default::default(),
+            incomplete_batches: Default::default(),
             batch_timeout_ms: 500,
             closed: Default::default(),
             flushes_in_progress: Default::default(),
             appends_in_progress: Default::default(),
             nodes_drain_index: Default::default(),
+            batch_id: Default::default(),
         }
     }
 
@@ -75,6 +82,7 @@ impl RecordAccumulator {
         let row_type = &cluster.get_table(table_path).row_type;
 
         let mut batch = ArrowLog(ArrowLogWriteBatch::new(
+            self.batch_id.fetch_add(1, Ordering::Relaxed),
             table_path.as_ref().clone(),
             0,
             row_type,
@@ -82,12 +90,18 @@ impl RecordAccumulator {
             current_time_ms(),
         ));
 
+        let batch_id = batch.batch_id();
+
         let result_handle = batch
             .try_append(record)?
             .expect("must append to a new batch");
+
         let batch_is_closed = batch.is_closed();
         dq.push_back(batch);
 
+        self.incomplete_batches
+            .write()
+            .insert(batch_id, result_handle.clone());
         Ok(RecordAppendResult::new(
             result_handle,
             dq.len() > 1 || batch_is_closed,
@@ -98,7 +112,7 @@ impl RecordAccumulator {
 
     pub async fn append(
         &self,
-        record: &WriteRecord,
+        record: &WriteRecord<'_>,
         bucket_id: BucketId,
         cluster: &Cluster,
         abort_if_batch_full: bool,
@@ -303,6 +317,10 @@ impl RecordAccumulator {
         Ok(ready)
     }
 
+    pub fn remove_incomplete_batches(&self, batch_id: i64) {
+        self.incomplete_batches.write().remove(&batch_id);
+    }
+
     fn get_all_buckets_in_current_node(
         &self,
         current: &ServerNode,
@@ -322,7 +340,19 @@ impl RecordAccumulator {
     }
 
     fn flush_in_progress(&self) -> bool {
-        self.flushes_in_progress > 0
+        self.flushes_in_progress.load(Ordering::SeqCst) > 0
+    }
+
+    pub fn begin_flush(&self) {
+        self.flushes_in_progress.fetch_add(1, Ordering::SeqCst);
+    }
+
+    #[allow(unused_must_use)]
+    pub async fn await_flush_completion(&self) -> Result<()> {
+        for result_handle in self.incomplete_batches.read().values() {
+            result_handle.wait().await?;
+        }
+        Ok(())
     }
 }
 

@@ -52,7 +52,7 @@ impl Sender {
     }
 
     async fn run_once(&self) -> Result<()> {
-        let cluster = self.metadata.get_cluster().await;
+        let cluster = self.metadata.get_cluster();
         let ready_check_result = self.accumulator.ready(&cluster).await;
 
         // Update metadata if needed
@@ -110,6 +110,7 @@ impl Sender {
         collated: &HashMap<i32, Vec<Arc<ReadyWriteBatch>>>,
     ) -> Result<()> {
         for (leader_id, batches) in collated {
+            println!("send request batch");
             self.send_write_request(*leader_id, self.ack, batches)
                 .await?;
         }
@@ -136,8 +137,9 @@ impl Sender {
                 .push(batch);
         }
 
-        let destination_node = self
-            .metadata
+        let cluster = self.metadata.get_cluster();
+
+        let destination_node = cluster
             .get_tablet_server(destination)
             .ok_or(WriteError(String::from("destination node not found")))?;
         let connection = self.metadata.get_connection(destination_node).await?;
@@ -163,7 +165,7 @@ impl Sender {
 
             let ready_batch = records_by_bucket.get(&tb).unwrap();
             if let Some(error_code) = produce_log_response_for_bucket.error_code {
-                // todo
+                todo!("handle_produce_response error: {}", error_code)
             } else {
                 self.complete_batch(ready_batch)
             }
@@ -173,6 +175,7 @@ impl Sender {
 
     fn complete_batch(&self, ready_write_batch: &Arc<ReadyWriteBatch>) {
         if ready_write_batch.write_batch.complete(Ok(())) {
+            // remove from in flight batches
             let mut in_flight_guard = self.in_flight_batches.lock();
             if let Some(in_flight) = in_flight_guard.get_mut(&ready_write_batch.table_bucket) {
                 in_flight.retain(|b| !Arc::ptr_eq(b, &ready_write_batch));
@@ -180,6 +183,9 @@ impl Sender {
                     in_flight_guard.remove(&ready_write_batch.table_bucket);
                 }
             }
+            // remove from incomplete batches
+            self.accumulator
+                .remove_incomplete_batches(ready_write_batch.write_batch.batch_id())
         }
     }
 

@@ -1,4 +1,3 @@
-use crate::messages;
 use crate::messages::CreateTableResponse;
 use crate::metadata::metadata_serde::JsonSerde;
 use crate::metadata::{TableDescriptor, TablePath};
@@ -8,6 +7,7 @@ use crate::new::protocol::api_version::ApiVersion;
 use crate::new::protocol::message::header::ReadVersionedError;
 use crate::new::protocol::message::{ReadVersionedType, RequestBody, WriteVersionedType};
 use crate::rpc::to_table_path;
+use crate::{impl_read_version_type, impl_write_version_type, messages};
 use bytes::{Buf, BufMut};
 use prost::Message;
 
@@ -40,24 +40,5 @@ impl RequestBody for CreateTableRequest {
     const REQUEST_VERSION: ApiVersion = ApiVersion(0);
 }
 
-impl<W> WriteVersionedType<W> for CreateTableRequest
-where
-    W: BufMut,
-{
-    fn write_versioned(
-        &self,
-        writer: &mut W,
-        version: ApiVersion,
-    ) -> Result<(), WriteVersionedError> {
-        Ok(self.inner_request.encode(writer).unwrap())
-    }
-}
-
-impl<R> ReadVersionedType<R> for CreateTableResponse
-where
-    R: Buf,
-{
-    fn read_versioned(reader: &mut R, version: ApiVersion) -> Result<Self, ReadVersionedError> {
-        Ok(CreateTableResponse::decode(reader).unwrap())
-    }
-}
+impl_write_version_type!(CreateTableRequest);
+impl_read_version_type!(CreateTableResponse);

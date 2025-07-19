@@ -1,6 +1,6 @@
-use crate::admin::admin::FlussAdmin;
 use crate::metadata::TablePath;
 use crate::new::args::Config;
+use crate::new::client::admin::FlussAdmin;
 use crate::new::client::metadata::Metadata;
 use crate::new::client::table::FlussTable;
 use crate::new::client::write::writer_client::WriterClient;
@@ -33,8 +33,16 @@ impl FlussConnection {
         })
     }
 
-    fn get_admin(&self) -> FlussAdmin {
-        todo!()
+    pub fn get_metadata(&self) -> Arc<Metadata> {
+        self.metadata.clone()
+    }
+
+    pub fn get_connections(&self) -> Arc<Connections> {
+        self.network_connects.clone()
+    }
+
+    pub async fn get_admin(&self) -> Result<FlussAdmin> {
+        Ok(FlussAdmin::new(self.network_connects.clone(), self.metadata.clone()).await?)
     }
 
     pub fn get_or_create_writer_client(&self) -> Result<Arc<WriterClient>> {
@@ -48,14 +56,9 @@ impl FlussConnection {
         Ok(client)
     }
 
-    async fn get_table(&self, table_path: &TablePath) -> Result<FlussTable> {
+    pub async fn get_table(&self, table_path: &TablePath) -> Result<FlussTable> {
         self.metadata.update_table_metadata(table_path).await?;
-        let table_info = self
-            .metadata
-            .get_cluster()
-            .await
-            .get_table(table_path)
-            .clone();
+        let table_info = self.metadata.get_cluster().get_table(table_path).clone();
         Ok(FlussTable::new(self, self.metadata.clone(), table_info))
     }
 }

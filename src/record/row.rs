@@ -37,7 +37,7 @@ pub trait InternalRow {
     fn get_char(&self, pos: usize, length: usize) -> String;
 
     /// Returns the string value at the given position
-    fn get_string(&self, pos: usize) -> String;
+    fn get_string(&self, pos: usize) -> &str;
 
     // /// Returns the decimal value at the given position
     // fn get_decimal(&self, pos: usize, precision: usize, scale: usize) -> Decimal;
@@ -171,14 +171,13 @@ impl InternalRow for ColumnarRow {
             .unwrap_or_else(|_| String::from_utf8_lossy(bytes).into_owned())
     }
 
-    fn get_string(&self, pos: usize) -> String {
+    fn get_string(&self, pos: usize) -> &str {
         self.record_batch
             .column(pos)
             .as_any()
             .downcast_ref::<StringArray>()
             .expect("Expected String array.")
             .value(self.row_id)
-            .to_string()
     }
 
     fn get_binary(&self, pos: usize, length: usize) -> Vec<u8> {

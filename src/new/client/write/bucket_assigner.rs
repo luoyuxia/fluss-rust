@@ -3,7 +3,7 @@ use crate::new::client::metadata::Cluster;
 use rand::Rng;
 use std::sync::atomic::{AtomicI32, Ordering};
 
-pub trait BucketAssigner {
+pub trait BucketAssigner: Sync + Send {
     fn abort_if_batch_full(&self) -> bool;
 
     fn on_new_batch(&self, cluster: &Cluster, prev_bucket_id: i32);

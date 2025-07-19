@@ -7,6 +7,7 @@ use crate::new::record::arrow::MemoryLogRecordsArrowBuilder;
 use std::cmp::max;
 
 struct InnerWriteBatch {
+    batch_id: i64,
     table_path: TablePath,
     create_ms: i64,
     bucket_id: BucketId,
@@ -16,8 +17,9 @@ struct InnerWriteBatch {
 }
 
 impl InnerWriteBatch {
-    fn new(table_path: TablePath, create_ms: i64, bucket_id: BucketId) -> Self {
+    fn new(batch_id: i64, table_path: TablePath, create_ms: i64, bucket_id: BucketId) -> Self {
         InnerWriteBatch {
+            batch_id,
             table_path,
             create_ms,
             bucket_id,
@@ -91,7 +93,6 @@ impl WriteBatch {
         }
     }
 
-    // todo: build can be mutable
     pub fn build(&self) -> Result<Vec<u8>> {
         match self {
             WriteBatch::ArrowLog(batch) => batch.build(),
@@ -100,6 +101,10 @@ impl WriteBatch {
 
     pub fn complete(&self, write_result: BatchWriteResult) -> bool {
         self.inner_batch().complete(write_result)
+    }
+
+    pub fn batch_id(&self) -> i64 {
+        self.inner_batch().batch_id
     }
 }
 
@@ -110,18 +115,23 @@ pub struct ArrowLogWriteBatch {
 
 impl ArrowLogWriteBatch {
     pub fn new(
+        batch_id: i64,
         table_path: TablePath,
         schema_id: i32,
         row_type: &DataType,
         bucket_id: BucketId,
         create_ms: i64,
     ) -> Self {
-        let base = InnerWriteBatch::new(table_path, create_ms, bucket_id);
+        let base = InnerWriteBatch::new(batch_id, table_path, create_ms, bucket_id);
 
         Self {
             write_batch: base,
             arrow_builder: MemoryLogRecordsArrowBuilder::new(schema_id, row_type),
         }
+    }
+
+    pub fn batch_id(&self) -> i64 {
+        self.write_batch.batch_id
     }
 
     pub fn try_append(&mut self, write_record: &WriteRecord) -> Result<Option<ResultHandle>> {

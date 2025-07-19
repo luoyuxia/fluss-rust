@@ -6,7 +6,9 @@ use bytes::{Buf, BufMut};
 use prost::Message;
 use std::io::{Read, Write};
 
-mod create_table;
+pub mod create_table;
+pub mod fetch;
+pub mod get_table;
 pub mod header;
 pub mod update_metadata;
 pub mod write;
@@ -45,4 +47,39 @@ impl<T: RequestBody> RequestBody for &T {
     const API_KEY: ApiKey = T::API_KEY;
 
     const REQUEST_VERSION: ApiVersion = T::REQUEST_VERSION;
+}
+
+#[macro_export]
+macro_rules! impl_write_version_type {
+    ($type:ty) => {
+        impl<W> WriteVersionedType<W> for $type
+        where
+            W: BufMut,
+        {
+            fn write_versioned(
+                &self,
+                writer: &mut W,
+                version: ApiVersion,
+            ) -> Result<(), WriteVersionedError> {
+                Ok(self.inner_request.encode(writer).unwrap())
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_read_version_type {
+    ($type:ty) => {
+        impl<R> ReadVersionedType<R> for $type
+        where
+            R: Buf,
+        {
+            fn read_versioned(
+                reader: &mut R,
+                version: ApiVersion,
+            ) -> Result<Self, ReadVersionedError> {
+                Ok(<$type>::decode(reader).unwrap())
+            }
+        }
+    };
 }

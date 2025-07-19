@@ -1,10 +1,10 @@
 use core::fmt;
+use parse_display::Display;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     fmt::{Display, Formatter},
 };
-
-use serde::{Deserialize, Serialize};
 
 use crate::Result;
 pub mod metadata_serde;
@@ -14,6 +14,12 @@ pub mod metadata_updater;
 pub struct TablePath {
     database: String,
     table: String,
+}
+
+impl Display for TablePath {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}.{}", self.database, self.table)
+    }
 }
 
 impl TablePath {

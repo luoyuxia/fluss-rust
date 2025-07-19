@@ -11,7 +11,7 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] io::Error),
 
-    /// An error as reported by a remote Kafka server
+    /// An error as reported by a remote FLuss server
     #[error("Fluss Error ({0:?})")]
     Fluss(FlussCode),
 

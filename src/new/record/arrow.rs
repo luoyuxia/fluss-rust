@@ -117,8 +117,9 @@ impl MemoryLogRecordsArrowBuilder {
         for (idx, value) in row.values.iter().enumerate() {
             let mut builder_binding = self.arrow_column_builders.lock();
             let builder = builder_binding.get_mut(idx).unwrap();
-            (value as &dyn ToArrow).append_to(builder.as_mut())?;
+            value.append_to(builder.as_mut())?;
         }
+        self.record_count += 1;
         // todo: consider write other change type
         Ok(())
     }
@@ -220,29 +221,6 @@ impl MemoryLogRecordsArrowBuilder {
 pub trait ToArrow {
     fn append_to(&self, builder: &mut dyn ArrayBuilder) -> Result<()>;
 }
-
-macro_rules! impl_to_arrow {
-    ($ty:ty, $variant:ident) => {
-        impl ToArrow for $ty {
-            fn append_to(&self, builder: &mut dyn ArrayBuilder) -> Result<()> {
-                if let Some(b) = builder.as_any_mut().downcast_mut::<$variant>() {
-                    b.append_value(*self);
-                    Ok(())
-                } else {
-                    Err(WriteError(format!(
-                        "Cannot cast {} to {} builder",
-                        stringify!($ty),
-                        stringify!($variant)
-                    )))
-                }
-            }
-        }
-    };
-}
-
-impl_to_arrow!(i8, Int8Builder);
-impl_to_arrow!(i16, Int16Builder);
-impl_to_arrow!(i32, Int32Builder);
 
 pub struct LogRecordsBatchs<'a> {
     data: &'a [u8],
@@ -557,13 +535,24 @@ pub struct MyVec<T>(pub StreamReader<T>);
 
 #[cfg(test)]
 mod test {
+    use crate::metadata::{DataField, DataType, RowType};
+    use crate::new::record::arrow::MemoryLogRecordsArrowBuilder;
 
     // #[test]
     // pub fn t1() {
     //     let schema_id = 1;
     //     let arrow_record_batch =
     //         record_batch!(("c1", Int32, [1, 2]), ("c2", Utf8, ["a1", "a2"])).unwrap();
-    //     let data = MemoryLogRecordsArrowBuilder::new(schema_id, &arrow_record_batch)
+    //     let row_type = DataType::Row(
+    //         RowType::new(
+    //             vec![DataField::new(
+    //                 "c1",
+    //                 DataType::Int,
+    //                 None
+    //             )]
+    //         )
+    //     )
+    //     let data = MemoryLogRecordsArrowBuilder::new(schema_id, )
     //         .build()
     //         .unwrap();
     //

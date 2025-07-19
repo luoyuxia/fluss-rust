@@ -68,9 +68,9 @@ impl WriterClient {
         }
     }
 
-    pub async fn send(&self, record: &WriteRecord) -> Result<ResultHandle> {
+    pub async fn send(&self, record: &WriteRecord<'_>) -> Result<ResultHandle> {
         let table_path = &record.table_path;
-        let cluster = self.metadata.get_cluster().await;
+        let cluster = self.metadata.get_cluster();
 
         let bucket_assigner = {
             if let Some(assigner) = self.bucket_assigners.get(&table_path) {
@@ -113,6 +113,12 @@ impl WriterClient {
         self.sender_join_handle
             .await
             .map_err(|e| Error::WriteError(e.to_string()))?;
+        Ok(())
+    }
+
+    pub async fn flush(&self) -> Result<()> {
+        self.accumulate.begin_flush();
+        self.accumulate.await_flush_completion().await?;
         Ok(())
     }
 

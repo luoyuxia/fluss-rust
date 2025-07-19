@@ -3,6 +3,7 @@ use crate::new::client::GenericRow;
 use crate::new::client::write::broadcast::{BatchWriteResult, BroadcastOnceReceiver};
 use crate::new::error::{Error, Result};
 use std::rc::Rc;
+use std::sync::Arc;
 
 pub mod accumulator;
 mod batch;
@@ -11,17 +12,18 @@ mod bucket_assigner;
 mod sender;
 pub mod writer_client;
 
-pub struct WriteRecord {
-    pub row: GenericRow,
-    pub table_path: Rc<TablePath>,
+pub struct WriteRecord<'a> {
+    pub row: GenericRow<'a>,
+    pub table_path: Arc<TablePath>,
 }
 
-impl WriteRecord {
-    pub fn new(table_path: Rc<TablePath>, row: GenericRow) -> Self {
+impl<'a> WriteRecord<'a> {
+    pub fn new(table_path: Arc<TablePath>, row: GenericRow<'a>) -> Self {
         Self { row, table_path }
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ResultHandle {
     receiver: BroadcastOnceReceiver<BatchWriteResult>,
 }
@@ -31,7 +33,7 @@ impl ResultHandle {
         ResultHandle { receiver }
     }
 
-    pub async fn wait(&mut self) -> Result<BatchWriteResult, Error> {
+    pub async fn wait(&self) -> Result<BatchWriteResult, Error> {
         self.receiver
             .receive()
             .await

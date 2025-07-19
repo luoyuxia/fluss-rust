@@ -14,7 +14,7 @@ use fluss_rust::{
 pub async fn main() -> Result<()> {
     // 1: create the table;
     let mut args = Args::default();
-    args.bootstrap_server = "127.0.0.1:59633".to_string();
+    args.bootstrap_server = "127.0.0.1:54865".to_string();
     let conn_config = ConnectionConfig::from_args(args);
     let conn = FlussConnection::new(conn_config).await;
 
@@ -46,6 +46,7 @@ pub async fn main() -> Result<()> {
     // 3: append log to the table
     let table = conn.get_table(&table_path).await;
     let append_writer = table.new_append().create_writer();
+
     let batch = record_batch!(
         ("c1", Int32, [1, 2, 3, 4, 5, 6]),
         ("c2", Utf8, ["a1", "a2", "a3", "a4", "a5", "a6"])
