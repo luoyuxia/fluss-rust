@@ -1,5 +1,4 @@
 use core::fmt;
-use parse_display::Display;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -798,7 +797,7 @@ impl DataTypes {
         let fields = field_types
             .into_iter()
             .enumerate()
-            .map(|(i, dt)| DataField::new(format!("f{}", i), dt, None))
+            .map(|(i, dt)| DataField::new(format!("f{i}"), dt, None))
             .collect();
         DataType::Row(RowType::new(fields))
     }
@@ -833,7 +832,7 @@ impl fmt::Display for DataField {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.name, self.data_type)?;
         if let Some(desc) = &self.description {
-            write!(f, " {}", desc)?;
+            write!(f, " {desc}")?;
         }
         Ok(())
     }
@@ -1045,7 +1044,7 @@ impl SchemaBuilder {
     fn normalize_columns(columns: &mut [Column], primary_key: Option<&PrimaryKey>) -> Vec<Column> {
         let names: Vec<_> = columns.iter().map(|c| &c.name).collect();
         if let Some(duplicates) = Self::find_duplicates(&names) {
-            panic!("Duplicate column names found: {:?}", duplicates);
+            panic!("Duplicate column names found: {duplicates:?}");
         }
 
         let Some(pk) = primary_key else {

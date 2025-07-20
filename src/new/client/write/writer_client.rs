@@ -73,7 +73,7 @@ impl WriterClient {
         let cluster = self.metadata.get_cluster();
 
         let bucket_assigner = {
-            if let Some(assigner) = self.bucket_assigners.get(&table_path) {
+            if let Some(assigner) = self.bucket_assigners.get(table_path) {
                 assigner.clone()
             } else {
                 let assigner = Arc::new(Self::create_bucket_assigner(table_path.as_ref()));

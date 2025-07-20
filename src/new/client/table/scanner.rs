@@ -221,10 +221,6 @@ impl LogFetcher {
 
     fn get_table_bucket_leader(&self, tb: &TableBucket) -> Option<i32> {
         let cluster = self.metadata.get_cluster();
-        if let Some(leader) = cluster.leader_for(tb) {
-            Some(leader.id())
-        } else {
-            None
-        }
+        cluster.leader_for(tb).map(|leader| leader.id())
     }
 }

@@ -52,7 +52,7 @@ impl RecordAccumulator {
     ) -> Result<Option<RecordAppendResult>> {
         let dq_size = dq.len();
         if let Some(last_batch) = dq.back_mut() {
-            return if let (Some(result_handle)) = last_batch.try_append(record)? {
+            return if let Some(result_handle) = last_batch.try_append(record)? {
                 Ok(Some(RecordAppendResult::new(
                     result_handle,
                     dq_size > 1 || last_batch.is_closed(),
@@ -133,7 +133,7 @@ impl RecordAccumulator {
             .entry(bucket_id)
             .or_insert_with(|| Mutex::new(VecDeque::new()));
         let mut dq_guard = dq.lock().await;
-        if let Some(append_result) = self.try_append(&record, &mut dq_guard)? {
+        if let Some(append_result) = self.try_append(record, &mut dq_guard)? {
             return Ok(append_result);
         }
 
@@ -143,7 +143,7 @@ impl RecordAccumulator {
             ));
         }
 
-        self.append_new_batch(cluster, &record, bucket_id, &mut dq_guard)
+        self.append_new_batch(cluster, record, bucket_id, &mut dq_guard)
     }
 
     pub async fn ready(&self, cluster: &Arc<Cluster>) -> ReadyCheckResult {
@@ -196,7 +196,7 @@ impl RecordAccumulator {
             let table_bucket = cluster.get_table_bucket(table_path, *bucket_id);
             if let Some(leader) = cluster.leader_for(&table_bucket) {
                 next_delay =
-                    self.batch_ready(&leader, waited_time_ms, full, ready_nodes, next_delay);
+                    self.batch_ready(leader, waited_time_ms, full, ready_nodes, next_delay);
             } else {
                 unknown_leader_tables.insert(table_path.clone());
             }
@@ -238,7 +238,7 @@ impl RecordAccumulator {
         let mut batches = HashMap::new();
         for node in nodes {
             let ready = self
-                .drain_batches_for_one_node(&cluster, &node, max_size)
+                .drain_batches_for_one_node(&cluster, node, max_size)
                 .await?;
             if !ready.is_empty() {
                 batches.insert(node.id(), ready);
@@ -327,7 +327,7 @@ impl RecordAccumulator {
         cluster: &Cluster,
     ) -> Vec<BucketLocation> {
         let mut buckets = vec![];
-        for (_, bucket_locations) in cluster.get_bucket_locations_by_path() {
+        for bucket_locations in cluster.get_bucket_locations_by_path().values() {
             for bucket_location in bucket_locations {
                 if let Some(leader) = bucket_location.leader() {
                     if current.id() == leader.id() {

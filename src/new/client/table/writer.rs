@@ -3,7 +3,6 @@ use crate::new::client::GenericRow;
 use crate::new::client::write::WriteRecord;
 use crate::new::client::write::writer_client::WriterClient;
 use crate::new::error::Result;
-use std::rc::Rc;
 use std::sync::Arc;
 
 pub trait TableWriter {
@@ -40,7 +39,7 @@ impl AbstractTableWriter {
     }
 
     pub async fn send(&self, write_record: &WriteRecord<'_>) -> Result<()> {
-        let result_handle = self.writer_client.send(&write_record).await?;
+        let result_handle = self.writer_client.send(write_record).await?;
         let result = result_handle.wait().await?;
         result_handle.result(result)
     }

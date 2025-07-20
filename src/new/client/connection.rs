@@ -42,7 +42,7 @@ impl FlussConnection {
     }
 
     pub async fn get_admin(&self) -> Result<FlussAdmin> {
-        Ok(FlussAdmin::new(self.network_connects.clone(), self.metadata.clone()).await?)
+        FlussAdmin::new(self.network_connects.clone(), self.metadata.clone()).await
     }
 
     pub fn get_or_create_writer_client(&self) -> Result<Arc<WriterClient>> {

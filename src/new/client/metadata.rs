@@ -210,20 +210,20 @@ impl Cluster {
         let offset = random_range(0..self.alive_tablet_servers.len());
         self.alive_tablet_servers
             .get(offset)
-            .expect(format!("can't find alive tab server by offset {}", offset).as_str())
+            .unwrap_or_else(|| panic!("can't find alive tab server by offset {offset}"))
     }
 
     pub fn get_bucket_count(&self, table_path: &TablePath) -> i32 {
         self.table_info_by_path
             .get(table_path)
-            .expect(format!("can't not table info by path {}", table_path).as_str())
+            .unwrap_or_else(|| panic!("can't not table info by path {table_path}"))
             .num_buckets
     }
 
     pub fn get_table(&self, table_path: &TablePath) -> &TableInfo {
         self.table_info_by_path
             .get(table_path)
-            .expect(format!("can't find table info by path {}", table_path).as_str())
+            .unwrap_or_else(|| panic!("can't find table info by path {table_path}"))
     }
 
     pub fn opt_get_table(&self, table_path: &TablePath) -> Option<&TableInfo> {
@@ -282,7 +282,7 @@ impl Metadata {
         let conn = self.connections.get_connection(&server).await?;
 
         let update_table_paths: Vec<&TablePath> =
-            table_paths.iter().map(|table_path| *table_path).collect();
+            table_paths.iter().copied().collect();
         let response = conn
             .request(UpdateMetadataRequest::new(update_table_paths.as_slice()))
             .await?;

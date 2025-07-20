@@ -62,7 +62,6 @@ impl Sender {
                     &ready_check_result
                         .unknown_leader_tables
                         .iter()
-                        .map(|path| path)
                         .collect(),
                 )
                 .await?;
@@ -99,7 +98,7 @@ impl Sender {
             for batch in batch_list {
                 in_flight
                     .entry(batch.table_bucket.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(batch.clone());
             }
         }
@@ -178,7 +177,7 @@ impl Sender {
             // remove from in flight batches
             let mut in_flight_guard = self.in_flight_batches.lock();
             if let Some(in_flight) = in_flight_guard.get_mut(&ready_write_batch.table_bucket) {
-                in_flight.retain(|b| !Arc::ptr_eq(b, &ready_write_batch));
+                in_flight.retain(|b| !Arc::ptr_eq(b, ready_write_batch));
                 if in_flight.is_empty() {
                     in_flight_guard.remove(&ready_write_batch.table_bucket);
                 }

@@ -130,7 +130,7 @@ impl JsonSerde for DataType {
             "ARRAY" => todo!(),
             "MAP" => todo!(),
             "ROW" => todo!(),
-            _ => panic!("{}", format!("Unknown type root: {}", type_root)),
+            _ => panic!("{}", format!("Unknown type root: {type_root}")),
         };
 
         if let Some(nullable) = node.get(Self::FIELD_NAME_NULLABLE) {

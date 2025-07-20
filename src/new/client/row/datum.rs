@@ -52,7 +52,7 @@ impl Datum<'_> {
     pub fn as_str(&self) -> &str {
         match self {
             Self::String(s) => s,
-            _ => panic!("not a string: {:?}", self),
+            _ => panic!("not a string: {self:?}"),
         }
     }
 }
@@ -254,7 +254,7 @@ impl Date {
 
     pub fn year(&self) -> i32 {
         let date = NaiveDate::from_num_days_from_ce_opt(self.0 + UNIX_EPOCH_DAYS).unwrap();
-        date.year() as i32
+        date.year()
     }
     pub fn month(&self) -> i32 {
         let date = NaiveDate::from_num_days_from_ce_opt(self.0 + UNIX_EPOCH_DAYS).unwrap();

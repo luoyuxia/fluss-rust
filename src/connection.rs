@@ -9,7 +9,6 @@ use std::{
 };
 
 use byteorder::{BigEndian, WriteBytesExt};
-use clap::builder::Str;
 use prost::Message;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
@@ -141,8 +140,8 @@ impl ServerNode {
         ServerNode {
             id,
             uid: match server_type {
-                ServerType::CoordinatorServer => format!("cs-{}", id),
-                ServerType::TabletServer => format!("ts-{}", id),
+                ServerType::CoordinatorServer => format!("cs-{id}"),
+                ServerType::TabletServer => format!("ts-{id}"),
             },
             host,
             port,

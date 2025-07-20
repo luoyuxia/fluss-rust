@@ -33,7 +33,7 @@ impl StickyBucketAssigner {
             if available_buckets.is_empty() {
                 let mut rng = rand::rng();
                 let mut random: i32 = rng.random();
-                random = random & i32::MAX;
+                random &= i32::MAX;
                 new_bucket = random % cluster.get_bucket_count(&self.table_path);
             } else if available_buckets.len() == 1 {
                 new_bucket = available_buckets[0].table_bucket.bucket_id();
@@ -41,7 +41,7 @@ impl StickyBucketAssigner {
                 let mut rng = rand::rng();
                 while new_bucket < 0 || new_bucket == old_bucket {
                     let mut random: i32 = rng.random();
-                    random = random & i32::MAX;
+                    random &= i32::MAX;
                     new_bucket = available_buckets
                         [(random % available_buckets.len() as i32) as usize]
                         .bucket_id();

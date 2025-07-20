@@ -3,8 +3,6 @@ use crate::new::protocol::api_key::ApiKey;
 use crate::new::protocol::api_version::ApiVersion;
 use crate::new::protocol::message::header::ReadVersionedError;
 use bytes::{Buf, BufMut};
-use prost::Message;
-use std::io::{Read, Write};
 
 pub mod create_table;
 pub mod fetch;

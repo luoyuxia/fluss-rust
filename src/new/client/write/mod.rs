@@ -2,7 +2,6 @@ use crate::metadata::TablePath;
 use crate::new::client::GenericRow;
 use crate::new::client::write::broadcast::{BatchWriteResult, BroadcastOnceReceiver};
 use crate::new::error::{Error, Result};
-use std::rc::Rc;
 use std::sync::Arc;
 
 pub mod accumulator;

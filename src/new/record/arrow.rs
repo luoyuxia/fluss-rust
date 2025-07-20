@@ -3,7 +3,6 @@ use arrow::array::{
     Int16Builder, Int32Builder, Int64Builder, StringBuilder, UInt8Builder, UInt16Builder,
     UInt32Builder, UInt64Builder,
 };
-use arrow::ipc::IntBuilder;
 use arrow::{
     array::RecordBatch,
     ipc::{reader::StreamReader, writer::StreamWriter},
@@ -14,7 +13,6 @@ use byteorder::WriteBytesExt;
 use byteorder::{ByteOrder, LittleEndian};
 use crc32c::crc32c;
 use parking_lot::Mutex;
-use std::cell::RefCell;
 use std::{
     io::{Cursor, Read, Write},
     sync::Arc,
@@ -22,9 +20,7 @@ use std::{
 use tokio::io::AsyncReadExt;
 
 use crate::metadata::DataType;
-use crate::metadata::Schema;
 use crate::new::client::GenericRow;
-use crate::new::error::Error::WriteError;
 use crate::new::error::Result;
 use crate::record::row::ColumnarRow;
 use crate::record::{ChangeType, ScanRecord};
@@ -213,7 +209,7 @@ impl MemoryLogRecordsArrowBuilder {
             arrow_schema::DataType::Float64 => Box::new(Float64Builder::new()),
             arrow_schema::DataType::Boolean => Box::new(BooleanBuilder::new()),
             arrow_schema::DataType::Utf8 => Box::new(StringBuilder::new()),
-            dt => panic!("Unsupported data type: {:?}", dt),
+            dt => panic!("Unsupported data type: {dt:?}"),
         }
     }
 }
@@ -535,8 +531,8 @@ pub struct MyVec<T>(pub StreamReader<T>);
 
 #[cfg(test)]
 mod test {
-    use crate::metadata::{DataField, DataType, RowType};
-    use crate::new::record::arrow::MemoryLogRecordsArrowBuilder;
+    
+    
 
     // #[test]
     // pub fn t1() {

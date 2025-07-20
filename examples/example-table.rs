@@ -38,7 +38,7 @@ pub async fn main() -> Result<()> {
 
     // 2: get the table
     let table_info = admin.get_table(&table_path).await.unwrap();
-    print!("Get created table:\n {}\n", table_info);
+    print!("Get created table:\n {table_info}\n");
 
     // let's sleep 2 seconds to wait leader ready
     thread::sleep(Duration::from_secs(2));

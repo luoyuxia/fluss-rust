@@ -58,8 +58,7 @@ impl ChangeType {
             3 => Ok(ChangeType::UpdateAfter),
             4 => Ok(ChangeType::Delete),
             _ => Err(format!(
-                "Unsupported byte value '{}' for change type",
-                value
+                "Unsupported byte value '{value}' for change type"
             )),
         }
     }

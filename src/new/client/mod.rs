@@ -74,6 +74,12 @@ impl<'a> InternalRow for GenericRow<'a> {
     }
 }
 
+impl<'a> Default for GenericRow<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> GenericRow<'a> {
     pub fn new() -> GenericRow<'a> {
         GenericRow { values: vec![] }

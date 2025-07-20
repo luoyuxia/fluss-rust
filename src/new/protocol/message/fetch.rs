@@ -1,4 +1,4 @@
-use crate::messages::{FetchLogResponse, GetTableInfoResponse};
+use crate::messages::FetchLogResponse;
 use crate::new::messenger::WriteVersionedError;
 use crate::new::protocol::api_key::ApiKey;
 use crate::new::protocol::api_version::ApiVersion;

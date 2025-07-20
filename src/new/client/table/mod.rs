@@ -43,7 +43,7 @@ impl<'a> FlussTable<'a> {
     }
 
     pub fn new_scan(&self) -> TableScan {
-        TableScan::new(&self.conn, self.table_info.clone(), self.metadata.clone())
+        TableScan::new(self.conn, self.table_info.clone(), self.metadata.clone())
     }
 }
 
