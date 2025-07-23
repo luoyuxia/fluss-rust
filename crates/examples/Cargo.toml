@@ -1,0 +1,17 @@
+[package]
+edition = { workspace = true }
+license = { workspace = true }
+name = "fluss-examples"
+rust-version = { workspace = true }
+version = { workspace = true }
+
+
+[dependencies]
+fluss = { workspace = true }
+tokio = { workspace = true }
+clap = { workspace = true}
+
+
+[[example]]
+name = "example-table"
+path = "src/example_table.rs"
