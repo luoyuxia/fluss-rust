@@ -36,10 +36,18 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
+          - macos-latest  # 添加 macOS
     steps:
       - uses: actions/checkout@v4
+
       - name: Install protoc
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            brew install protobuf
+          fi
+
       - name: Build
         run: cargo build
 
@@ -49,10 +57,18 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
+          - macos-latest  # 添加 macOS
     steps:
       - uses: actions/checkout@v4
+
       - name: Install protoc
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            brew install protobuf
+          fi
+
       - name: Test
         run: cargo test --all-targets --workspace
         env:

@@ -15,7 +15,7 @@ pub fn current_time_ms() -> i64 {
 
 pub struct FairBucketStatusMap<S> {
     map: LinkedHashMap<TableBucket, Arc<S>>,
-    size: AtomicUsize,
+    size: usize,
 }
 
 #[allow(dead_code)]
@@ -23,7 +23,7 @@ impl<S> FairBucketStatusMap<S> {
     pub fn new() -> Self {
         Self {
             map: LinkedHashMap::new(),
-            size: AtomicUsize::new(0),
+            size: 0,
         }
     }
 
@@ -118,7 +118,7 @@ impl<S> FairBucketStatusMap<S> {
 
     /// Gets the current bucket count (thread-safe)
     pub fn size(&self) -> usize {
-        self.size.load(Ordering::Relaxed)
+        self.size
     }
 
     pub fn set(&mut self, bucket_to_status: HashMap<TableBucket, Arc<S>>)
@@ -150,7 +150,7 @@ impl<S> FairBucketStatusMap<S> {
     }
 
     fn update_size(&mut self) {
-        self.size.store(self.map.len(), Ordering::Relaxed);
+        self.size = self.map.len()
     }
 }
 
