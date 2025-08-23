@@ -378,10 +378,16 @@ impl DateType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct TimeType {
     nullable: bool,
     precision: u32,
+}
+
+impl TimeType {
+    fn default() -> Self {
+        Self::new(Self::DEFAULT_PRECISION)
+    }
 }
 
 impl TimeType {
@@ -390,11 +396,6 @@ impl TimeType {
     pub const MAX_PRECISION: u32 = 9;
 
     pub const DEFAULT_PRECISION: u32 = 0;
-
-    #[allow(clippy::should_implement_trait)]
-    pub fn default() -> Self {
-        Self::new(Self::DEFAULT_PRECISION)
-    }
 
     pub fn new(precision: u32) -> Self {
         Self::with_nullable(true, precision)
@@ -422,17 +423,18 @@ pub struct TimestampType {
     precision: u32,
 }
 
+impl Default for TimestampType {
+    fn default() -> Self {
+        Self::new(Self::DEFAULT_PRECISION)
+    }
+}
+
 impl TimestampType {
     pub const MIN_PRECISION: u32 = 0;
 
     pub const MAX_PRECISION: u32 = 9;
 
     pub const DEFAULT_PRECISION: u32 = 6;
-
-    #[allow(clippy::should_implement_trait)]
-    pub fn default() -> Self {
-        Self::new(Self::DEFAULT_PRECISION)
-    }
 
     pub fn new(precision: u32) -> Self {
         Self::with_nullable(true, precision)
@@ -460,17 +462,18 @@ pub struct TimestampLTzType {
     precision: u32,
 }
 
+impl Default for TimestampLTzType {
+    fn default() -> Self {
+        Self::new(Self::DEFAULT_PRECISION)
+    }
+}
+
 impl TimestampLTzType {
     pub const MIN_PRECISION: u32 = 0;
 
     pub const MAX_PRECISION: u32 = 9;
 
     pub const DEFAULT_PRECISION: u32 = 6;
-
-    #[allow(clippy::should_implement_trait)]
-    pub fn default() -> Self {
-        Self::new(Self::DEFAULT_PRECISION)
-    }
 
     pub fn new(precision: u32) -> Self {
         Self::with_nullable(true, precision)
