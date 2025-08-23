@@ -1,7 +1,10 @@
 [workspace.package]
+categories = ["command-line-utilities"]
+description = "The rust implementation of fluss"
+repository = "https://github.com/apache/fluss-rust"
+name = "fluss"
 edition = "2024"
 version = "0.1.0"
-
 license = "Apache-2.0"
 rust-version = "1.85"
 
