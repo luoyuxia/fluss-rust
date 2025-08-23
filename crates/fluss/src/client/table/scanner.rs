@@ -1,17 +1,19 @@
-use std::cell::Cell;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use crate::client::connection::FlussConnection;
 use crate::client::metadata::Metadata;
-use crate::metadata::{TableBucket, TableInfo, TablePath};
-use crate::record::{to_arrow_schema, LogRecordsBatchs, ReadContext, ScanRecord, ScanRecords};
-use crate::rpc::RpcClient;
 use crate::error::Result;
+use crate::metadata::{TableBucket, TableInfo, TablePath};
 use crate::proto::{FetchLogRequest, PbFetchLogReqForBucket, PbFetchLogReqForTable};
+use crate::record::{LogRecordsBatchs, ReadContext, ScanRecord, ScanRecords, to_arrow_schema};
+use crate::rpc::RpcClient;
 use crate::util::FairBucketStatusMap;
+use std::cell::Cell;
+use std::collections::HashMap;
+use std::slice::from_ref;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 const LOG_FETCH_MAX_BYTES: i32 = 16 * 1024 * 1024;
+#[allow(dead_code)]
 const LOG_FETCH_MAX_BYTES_FOR_BUCKET: i32 = 1024;
 const LOG_FETCH_MIN_BYTES: i32 = 1;
 const LOG_FETCH_WAIT_MAX_TIME: i32 = 500;
@@ -69,14 +71,14 @@ impl LogScanner {
         }
     }
 
-    pub async fn poll(&self, timeout: Duration) -> Result<ScanRecords> {
+    pub async fn poll(&self, _timeout: Duration) -> Result<ScanRecords> {
         Ok(ScanRecords::new(self.poll_for_fetches().await?))
     }
 
     pub async fn subscribe(&self, bucket: i32, offset: i64) -> Result<()> {
         let table_bucket = TableBucket::new(self.table_id, bucket);
         self.metadata
-            .check_and_update_table_metadata(&[self.table_path.clone()])
+            .check_and_update_table_metadata(from_ref(&self.table_path))
             .await?;
         self.log_scanner_status
             .assign_scan_bucket(table_bucket, offset);
@@ -88,6 +90,7 @@ impl LogScanner {
     }
 }
 
+#[allow(dead_code)]
 struct LogFetcher {
     table_path: TablePath,
     conns: Arc<RpcClient>,
@@ -123,9 +126,7 @@ impl LogFetcher {
             let con = self.conns.get_connection(server_node).await?;
 
             let fetch_response = con
-                .request(crate::rpc::message::FetchLogRequest::new(
-                    fetch_request,
-                ))
+                .request(crate::rpc::message::FetchLogRequest::new(fetch_request))
                 .await?;
 
             for pb_fetch_log_resp in fetch_response.tables_resp {
@@ -225,12 +226,17 @@ impl LogFetcher {
     }
 }
 
-
-
+#[allow(dead_code)]
 pub struct LogScannerStatus {
     bucket_status_map: Arc<Mutex<FairBucketStatusMap<BucketScanStatus>>>,
 }
 
+// SAFETY: LogScannerStatus is safe to send and sync because it only contains Arc<Mutex<...>>
+// which are already Send and Sync
+unsafe impl Send for LogScannerStatus {}
+unsafe impl Sync for LogScannerStatus {}
+
+#[allow(dead_code)]
 impl LogScannerStatus {
     pub fn new() -> Self {
         Self {
@@ -323,11 +329,18 @@ impl Default for LogScannerStatus {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct BucketScanStatus {
     offset: Cell<i64>,
     high_watermark: Cell<i64>,
 }
 
+// SAFETY: BucketScanStatus is safe to send and sync because it only contains Cell<i64>
+// which are already Send and Sync
+unsafe impl Send for BucketScanStatus {}
+unsafe impl Sync for BucketScanStatus {}
+
+#[allow(dead_code)]
 impl BucketScanStatus {
     pub fn new(offset: i64) -> Self {
         Self {

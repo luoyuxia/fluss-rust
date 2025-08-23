@@ -1,15 +1,18 @@
-use crate::{impl_read_version_type, impl_write_version_type, proto};
 use crate::proto::FetchLogResponse;
 use crate::rpc::api_key::ApiKey;
 use crate::rpc::api_version::ApiVersion;
-use crate::rpc::message::{RequestBody, ReadVersionedType, WriteVersionedType};
 use crate::rpc::frame::{ReadError, WriteError};
+use crate::rpc::message::{ReadVersionedType, RequestBody, WriteVersionedType};
+use crate::{impl_read_version_type, impl_write_version_type, proto};
 use prost::Message;
 
 use bytes::{Buf, BufMut};
 
+#[allow(dead_code)]
 const LOG_FETCH_MAX_BYTES: i32 = 16 * 1024 * 1024;
+#[allow(dead_code)]
 const LOG_FETCH_MIN_BYTES: i32 = 1;
+#[allow(dead_code)]
 const LOG_FETCH_WAIT_MAX_TIME: i32 = 500;
 
 pub struct FetchLogRequest {

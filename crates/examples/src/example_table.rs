@@ -1,11 +1,11 @@
-use std::time::Duration;
-use tokio::try_join;
+use clap::Parser;
 use fluss::client::FlussConnection;
 use fluss::config::Config;
 use fluss::error::Result;
 use fluss::metadata::{DataTypes, Schema, TableDescriptor, TablePath};
 use fluss::row::{GenericRow, InternalRow};
-use clap::Parser;
+use std::time::Duration;
+use tokio::try_join;
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
@@ -51,7 +51,7 @@ pub async fn main() -> Result<()> {
 
     // scan rows
     let log_scanner = table.new_scan().create_log_scanner();
-    log_scanner.subscribe(0, 0).await;
+    log_scanner.subscribe(0, 0).await?;
 
     loop {
         let scan_records = log_scanner.poll(Duration::from_secs(10)).await?;
@@ -66,6 +66,4 @@ pub async fn main() -> Result<()> {
             );
         }
     }
-
-    Ok(())
 }

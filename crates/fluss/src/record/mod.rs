@@ -1,7 +1,7 @@
-use core::fmt;
-use std::collections::HashMap;
 use crate::metadata::TableBucket;
 use crate::row::ColumnarRow;
+use core::fmt;
+use std::collections::HashMap;
 
 mod arrow;
 mod error;
@@ -56,9 +56,7 @@ impl ChangeType {
             2 => Ok(ChangeType::UpdateBefore),
             3 => Ok(ChangeType::UpdateAfter),
             4 => Ok(ChangeType::Delete),
-            _ => Err(format!(
-                "Unsupported byte value '{value}' for change type"
-            )),
+            _ => Err(format!("Unsupported byte value '{value}' for change type")),
         }
     }
 }

@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use rand::random_range;
 use crate::BucketId;
-use crate::error::Result;
 use crate::cluster::{BucketLocation, ServerNode, ServerType};
+use crate::error::Result;
 use crate::metadata::{JsonSerde, TableBucket, TableDescriptor, TableInfo, TablePath};
 use crate::proto::MetadataResponse;
 use crate::rpc::{from_pb_server_node, from_pb_table_path};
+use rand::random_range;
+use std::collections::HashMap;
 
 static EMPTY: Vec<BucketLocation> = Vec::new();
 
@@ -143,8 +143,7 @@ impl Cluster {
                 tmp_available_locations_by_path.insert(table_path.clone(), bucket_for_table);
             }
         }
-        Ok(
-        Cluster::new(
+        Ok(Cluster::new(
             coordinator_server,
             servers,
             tmp_available_locations_by_path,
@@ -225,4 +224,3 @@ impl Cluster {
         self.table_info_by_path.get(table_path)
     }
 }
-

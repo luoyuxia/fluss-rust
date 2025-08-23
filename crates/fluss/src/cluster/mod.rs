@@ -1,6 +1,7 @@
 use crate::BucketId;
 use crate::metadata::{TableBucket, TablePath};
 
+#[allow(clippy::module_inception)]
 mod cluster;
 
 pub use cluster::Cluster;

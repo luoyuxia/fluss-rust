@@ -13,6 +13,7 @@ impl std::fmt::Display for ApiVersion {
     }
 }
 
+#[allow(dead_code)]
 impl ApiVersionRange {
     pub const fn new(min: ApiVersion, max: ApiVersion) -> Self {
         assert!(min.0 <= max.0);

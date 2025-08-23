@@ -24,4 +24,3 @@ pub fn from_pb_table_path(pb_table_path: &PbTablePath) -> TablePath {
         pb_table_path.table_name.to_string(),
     )
 }
-

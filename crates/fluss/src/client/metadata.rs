@@ -1,10 +1,10 @@
-use std::collections::HashSet;
-use std::net::SocketAddr;
 use crate::cluster::{Cluster, ServerNode, ServerType};
 use crate::metadata::{TableBucket, TablePath};
-use std::sync::Arc;
-use parking_lot::RwLock;
 use crate::rpc::{RpcClient, ServerConnection, UpdateMetadataRequest};
+use parking_lot::RwLock;
+use std::collections::HashSet;
+use std::net::SocketAddr;
+use std::sync::Arc;
 
 use crate::error::Result;
 use crate::proto::MetadataResponse;
@@ -39,10 +39,8 @@ impl Metadata {
 
     pub async fn update(&self, metadata_response: MetadataResponse) -> Result<()> {
         let origin_cluster = self.cluster.read().clone();
-        let new_cluster = Cluster::from_metadata_response(
-            metadata_response,
-            Some(&origin_cluster),
-        )?;
+        let new_cluster =
+            Cluster::from_metadata_response(metadata_response, Some(&origin_cluster))?;
         let mut cluster = self.cluster.write();
         *cluster = Arc::new(new_cluster);
         Ok(())
@@ -52,12 +50,11 @@ impl Metadata {
         let server = self.cluster.read().get_one_available_server().clone();
         let conn = self.connections.get_connection(&server).await?;
 
-        let update_table_paths: Vec<&TablePath> =
-            table_paths.iter().copied().collect();
+        let update_table_paths: Vec<&TablePath> = table_paths.iter().copied().collect();
         let response = conn
             .request(UpdateMetadataRequest::new(update_table_paths.as_slice()))
             .await?;
-        self.update(response).await;
+        self.update(response).await?;
         Ok(())
     }
 
@@ -67,13 +64,14 @@ impl Metadata {
     }
 
     pub async fn check_and_update_table_metadata(&self, table_paths: &[TablePath]) -> Result<()> {
-        let cluster_binding = self.cluster.read();
+        let cluster_binding = self.cluster.read().clone();
         let need_update_table_paths: HashSet<&TablePath> = table_paths
             .iter()
             .filter(|table_path| cluster_binding.opt_get_table(table_path).is_none())
             .collect();
         if !need_update_table_paths.is_empty() {
-            let _ = self.update_tables_metadata(&need_update_table_paths).await;
+            self.update_tables_metadata(&need_update_table_paths)
+                .await?;
         }
         Ok(())
     }
@@ -88,7 +86,7 @@ impl Metadata {
         guard.clone()
     }
 
-    pub fn leader_for(&self, table_bucket: &TableBucket) -> Option<&ServerNode> {
+    pub fn leader_for(&self, _table_bucket: &TableBucket) -> Option<&ServerNode> {
         todo!()
     }
 }

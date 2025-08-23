@@ -691,6 +691,7 @@ impl TableInfo {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         table_path: TablePath,
         table_id: i64,
@@ -706,7 +707,7 @@ impl TableInfo {
         modified_time: i64,
     ) -> Self {
         let row_type = schema.row_type.clone();
-        let primary_keys = schema
+        let primary_keys: Vec<String> = schema
             .primary_key_column_names()
             .iter()
             .map(|col| (*col).to_string())
@@ -839,7 +840,7 @@ impl TableInfo {
     }
 
     fn generate_physical_primary_key(
-        primary_keys: &Vec<String>,
+        primary_keys: &[String],
         partition_keys: &[String],
     ) -> Vec<String> {
         primary_keys

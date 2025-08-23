@@ -1,13 +1,13 @@
-use std::sync::Arc;
 use crate::client::metadata::Metadata;
 use crate::metadata::{JsonSerde, TableDescriptor, TableInfo, TablePath};
+use crate::rpc::message::{CreateTableRequest, GetTableRequest};
 use crate::rpc::{RpcClient, ServerConnection};
-use crate::rpc::message::{GetTableRequest, CreateTableRequest};
-
+use std::sync::Arc;
 
 use crate::error::Result;
-use crate::proto::{ GetTableInfoResponse};
+use crate::proto::GetTableInfoResponse;
 
+#[allow(dead_code)]
 pub struct FlussAdmin {
     admin_gateway: ServerConnection,
     metadata: Arc<Metadata>,
@@ -38,7 +38,7 @@ impl FlussAdmin {
         table_descriptor: &TableDescriptor,
         ignore_if_exists: bool,
     ) -> Result<()> {
-        let response = self
+        let _response = self
             .admin_gateway
             .request(CreateTableRequest::new(
                 table_path,

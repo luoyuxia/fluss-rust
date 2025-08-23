@@ -1,10 +1,11 @@
-use std::sync::Arc;
 use crate::client::{WriteRecord, WriterClient};
 use crate::metadata::{TableInfo, TablePath};
 use crate::row::GenericRow;
+use std::sync::Arc;
 
 use crate::error::Result;
 
+#[allow(dead_code)]
 pub struct TableAppend {
     table_path: TablePath,
     table_info: TableInfo,

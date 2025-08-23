@@ -391,6 +391,7 @@ impl TimeType {
 
     pub const DEFAULT_PRECISION: u32 = 0;
 
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         Self::new(Self::DEFAULT_PRECISION)
     }
@@ -428,6 +429,7 @@ impl TimestampType {
 
     pub const DEFAULT_PRECISION: u32 = 6;
 
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         Self::new(Self::DEFAULT_PRECISION)
     }
@@ -465,6 +467,7 @@ impl TimestampLTzType {
 
     pub const DEFAULT_PRECISION: u32 = 6;
 
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         Self::new(Self::DEFAULT_PRECISION)
     }

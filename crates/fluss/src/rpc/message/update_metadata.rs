@@ -9,7 +9,6 @@ use crate::{impl_read_version_type, impl_write_version_type, proto};
 use bytes::{Buf, BufMut};
 use prost::Message;
 
-
 pub struct UpdateMetadataRequest {
     pub inner_request: proto::MetadataRequest,
 }

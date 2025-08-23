@@ -1,5 +1,6 @@
 use chrono::Datelike;
 
+use crate::error::Error::RowConvertError;
 use crate::error::Result;
 use arrow::array::{ArrayBuilder, Int8Builder, Int16Builder, Int32Builder, StringBuilder};
 use chrono::NaiveDate;
@@ -10,8 +11,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::ops::Deref;
-use crate::error::Error::RowConvertError;
 
+#[allow(dead_code)]
 const THIRTY_YEARS_MICROSECONDS: i64 = 946_684_800_000_000;
 
 pub const UNIX_EPOCH_DAYS: i32 = 719_163;
@@ -112,37 +113,37 @@ impl Datum<'_> {
             Datum::Null => {
                 todo!()
             }
-            Datum::Bool(v) => {
+            Datum::Bool(_v) => {
                 todo!()
             }
-            Datum::Int16(v) => {
+            Datum::Int16(_v) => {
                 todo!()
             }
             Datum::Int32(v) => {
                 v.append_to(builder)?;
             }
-            Datum::Int64(v) => {
+            Datum::Int64(_v) => {
                 todo!()
             }
-            Datum::Float64(v) => {
+            Datum::Float64(_v) => {
                 todo!()
             }
             Datum::String(v) => {
                 v.append_to(builder)?;
             }
-            Datum::Blob(v) => {
+            Datum::Blob(_v) => {
                 todo!()
             }
-            Datum::Decimal(v) => {
+            Datum::Decimal(_v) => {
                 todo!()
             }
-            Datum::Date(v) => {
+            Datum::Date(_v) => {
                 todo!()
             }
-            Datum::Timestamp(v) => {
+            Datum::Timestamp(_v) => {
                 todo!()
             }
-            Datum::TimestampTz(v) => {
+            Datum::TimestampTz(_v) => {
                 todo!()
             }
         }
@@ -174,8 +175,10 @@ impl_to_arrow!(i16, Int16Builder);
 impl_to_arrow!(i32, Int32Builder);
 impl_to_arrow!(&str, StringBuilder);
 
+#[allow(dead_code)]
 pub type F32 = OrderedFloat<f32>;
 pub type F64 = OrderedFloat<f64>;
+#[allow(dead_code)]
 pub type Str = Box<str>;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Serialize, Deserialize, Default)]

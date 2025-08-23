@@ -1,10 +1,10 @@
+use crate::metadata::TableBucket;
+use linked_hash_map::LinkedHashMap;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
-use linked_hash_map::LinkedHashMap;
-use crate::metadata::TableBucket;
 
 pub fn current_time_ms() -> i64 {
     SystemTime::now()
@@ -18,6 +18,7 @@ pub struct FairBucketStatusMap<S> {
     size: AtomicUsize,
 }
 
+#[allow(dead_code)]
 impl<S> FairBucketStatusMap<S> {
     pub fn new() -> Self {
         Self {

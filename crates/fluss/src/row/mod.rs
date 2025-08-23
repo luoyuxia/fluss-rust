@@ -56,7 +56,6 @@ pub trait InternalRow {
     fn get_bytes(&self, pos: usize) -> Vec<u8>;
 }
 
-
 pub struct GenericRow<'a> {
     pub values: Vec<Datum<'a>>,
 }
@@ -66,19 +65,19 @@ impl<'a> InternalRow for GenericRow<'a> {
         self.values.len()
     }
 
-    fn is_null_at(&self, pos: usize) -> bool {
+    fn is_null_at(&self, _pos: usize) -> bool {
         false
     }
 
-    fn get_boolean(&self, pos: usize) -> bool {
+    fn get_boolean(&self, _pos: usize) -> bool {
         todo!()
     }
 
-    fn get_byte(&self, pos: usize) -> i8 {
+    fn get_byte(&self, _pos: usize) -> i8 {
         todo!()
     }
 
-    fn get_short(&self, pos: usize) -> i16 {
+    fn get_short(&self, _pos: usize) -> i16 {
         todo!()
     }
 
@@ -86,19 +85,19 @@ impl<'a> InternalRow for GenericRow<'a> {
         self.values.get(pos).unwrap().try_into().unwrap()
     }
 
-    fn get_long(&self, pos: usize) -> i64 {
+    fn get_long(&self, _pos: usize) -> i64 {
         todo!()
     }
 
-    fn get_float(&self, pos: usize) -> f32 {
+    fn get_float(&self, _pos: usize) -> f32 {
         todo!()
     }
 
-    fn get_double(&self, pos: usize) -> f64 {
+    fn get_double(&self, _pos: usize) -> f64 {
         todo!()
     }
 
-    fn get_char(&self, pos: usize, length: usize) -> String {
+    fn get_char(&self, _pos: usize, _length: usize) -> String {
         todo!()
     }
 
@@ -106,11 +105,11 @@ impl<'a> InternalRow for GenericRow<'a> {
         self.values.get(pos).unwrap().try_into().unwrap()
     }
 
-    fn get_binary(&self, pos: usize, length: usize) -> Vec<u8> {
+    fn get_binary(&self, _pos: usize, _length: usize) -> Vec<u8> {
         todo!()
     }
 
-    fn get_bytes(&self, pos: usize) -> Vec<u8> {
+    fn get_bytes(&self, _pos: usize) -> Vec<u8> {
         todo!()
     }
 }

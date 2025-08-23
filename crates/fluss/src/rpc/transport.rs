@@ -1,16 +1,15 @@
+use crate::rpc::error::RpcError;
 use std::ops::DerefMut;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::net::TcpStream;
-use crate::rpc::error::RpcError;
 
 #[derive(Debug)]
 pub enum Transport {
     Plain { inner: TcpStream },
 }
-
 
 impl AsyncRead for Transport {
     fn poll_read(
@@ -23,7 +22,6 @@ impl AsyncRead for Transport {
         }
     }
 }
-
 
 impl AsyncWrite for Transport {
     fn poll_write(
@@ -49,7 +47,6 @@ impl AsyncWrite for Transport {
     }
 }
 
-
 impl Transport {
     pub async fn connect(server: &str, timeout: Option<Duration>) -> Result<Self, RpcError> {
         let tcp_stream = Self::connect_timeout(server, timeout).await?;
@@ -60,7 +57,9 @@ impl Transport {
         match timeout {
             Some(timeout) => Ok(tokio::time::timeout(timeout, TcpStream::connect(host))
                 .await
-                .map_err(|_| RpcError::ConnectionError(format!("Timeout connecting to host {host}")))??),
+                .map_err(|_| {
+                    RpcError::ConnectionError(format!("Timeout connecting to host {host}"))
+                })??),
             None => Ok(TcpStream::connect(host).await?),
         }
     }

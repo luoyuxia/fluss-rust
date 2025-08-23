@@ -1,11 +1,11 @@
-use std::sync::Arc;
-use parking_lot::RwLock;
+use crate::client::WriterClient;
 use crate::client::admin::FlussAdmin;
 use crate::client::metadata::Metadata;
 use crate::client::table::FlussTable;
-use crate::client::WriterClient;
 use crate::config::Config;
 use crate::rpc::RpcClient;
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 use crate::error::Result;
 use crate::metadata::TablePath;
@@ -24,7 +24,7 @@ impl FlussConnection {
             arg.bootstrap_server.as_ref().unwrap().as_str(),
             connections.clone(),
         )
-            .await?;
+        .await?;
 
         Ok(FlussConnection {
             metadata: Arc::new(metadata),
@@ -57,7 +57,7 @@ impl FlussConnection {
         Ok(client)
     }
 
-    pub async fn get_table(&self, table_path: &TablePath) -> Result<FlussTable> {
+    pub async fn get_table(&self, table_path: &TablePath) -> Result<FlussTable<'_>> {
         self.metadata.update_table_metadata(table_path).await?;
         let table_info = self.metadata.get_cluster().get_table(table_path).clone();
         Ok(FlussTable::new(self, self.metadata.clone(), table_info))

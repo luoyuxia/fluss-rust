@@ -1,16 +1,17 @@
-use std::sync::Arc;
-use dashmap::DashMap;
-use tokio::sync::mpsc;
-use tokio::task::JoinHandle;
 use crate::client::metadata::Metadata;
-use crate::client::{RecordAccumulator, ResultHandle, WriteRecord};
 use crate::client::write::bucket_assigner::{BucketAssigner, StickyBucketAssigner};
 use crate::client::write::sender::Sender;
+use crate::client::{RecordAccumulator, ResultHandle, WriteRecord};
 use crate::config::Config;
 use crate::metadata::TablePath;
+use dashmap::DashMap;
+use std::sync::Arc;
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 
 use crate::error::{Error, Result};
 
+#[allow(dead_code)]
 pub struct WriterClient {
     config: Config,
     max_request_size: i32,

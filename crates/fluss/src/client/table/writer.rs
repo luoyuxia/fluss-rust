@@ -1,29 +1,34 @@
-use std::sync::Arc;
 use crate::client::{WriteRecord, WriterClient};
 use crate::row::GenericRow;
+use std::sync::Arc;
 
 use crate::error::Result;
 use crate::metadata::{TableInfo, TablePath};
 
+#[allow(dead_code)]
 pub trait TableWriter {
     async fn flush(&self) -> Result<()>;
 }
 
+#[allow(dead_code)]
 pub trait AppendWriter: TableWriter {
     async fn append(&self, row: GenericRow) -> Result<()>;
 }
 
+#[allow(dead_code)]
 pub trait UpsertWriter: TableWriter {
     async fn upsert(&self, row: GenericRow) -> Result<()>;
     async fn delete(&self, row: GenericRow) -> Result<()>;
 }
 
+#[allow(dead_code)]
 pub struct AbstractTableWriter {
     table_path: Arc<TablePath>,
     writer_client: Arc<WriterClient>,
     field_count: i32,
 }
 
+#[allow(dead_code)]
 impl AbstractTableWriter {
     pub fn new(
         table_path: TablePath,
@@ -52,10 +57,12 @@ impl TableWriter for AbstractTableWriter {
 }
 
 // Append writer implementation
+#[allow(dead_code)]
 pub struct AppendWriterImpl {
     base: AbstractTableWriter,
 }
 
+#[allow(dead_code)]
 impl AppendWriterImpl {
     pub async fn append(&self, row: GenericRow<'_>) -> Result<()> {
         let record = WriteRecord::new(self.base.table_path.clone(), row);

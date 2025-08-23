@@ -1,17 +1,15 @@
-use std::{io, result};
-use arrow_schema::ArrowError;
-use thiserror::Error;
 use crate::rpc::RpcError;
+use arrow_schema::ArrowError;
+use std::{io, result};
+use thiserror::Error;
 
 pub type Result<T> = result::Result<T, Error>;
 
-
 #[derive(Debug, Error)]
 pub enum Error {
-
     #[error(transparent)]
     Io(#[from] io::Error),
-    
+
     #[error("Invalid table")]
     InvalidTableError(String),
 
@@ -32,5 +30,4 @@ pub enum Error {
 
     #[error("Illegal argument error: {0}")]
     IllegalArgument(String),
-    
 }

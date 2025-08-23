@@ -1,16 +1,15 @@
-use std::sync::Arc;
-use crate::{impl_read_version_type, impl_write_version_type, proto};
+use crate::error::Result as FlussResult;
 use crate::proto::{PbProduceLogReqForBucket, ProduceLogResponse};
 use crate::rpc::api_key::ApiKey;
 use crate::rpc::api_version::ApiVersion;
-use crate::error::Result as FlussResult;
-use crate::rpc::message::{RequestBody, ReadVersionedType, WriteVersionedType};
 use crate::rpc::frame::{ReadError, WriteError};
+use crate::rpc::message::{ReadVersionedType, RequestBody, WriteVersionedType};
+use crate::{impl_read_version_type, impl_write_version_type, proto};
+use std::sync::Arc;
 
-
+use crate::client::ReadyWriteBatch;
 use bytes::{Buf, BufMut};
 use prost::Message;
-use crate::client::ReadyWriteBatch;
 
 pub struct ProduceLogRequest {
     pub inner_request: proto::ProduceLogRequest,
@@ -23,10 +22,12 @@ impl ProduceLogRequest {
         max_request_timeout_ms: i32,
         ready_batches: Vec<&Arc<ReadyWriteBatch>>,
     ) -> FlussResult<Self> {
-        let mut request = proto::ProduceLogRequest::default();
-        request.table_id = table_id;
-        request.acks = ack as i32;
-        request.timeout_ms = max_request_timeout_ms;
+        let mut request = proto::ProduceLogRequest {
+            table_id,
+            acks: ack as i32,
+            timeout_ms: max_request_timeout_ms,
+            ..Default::default()
+        };
         for ready_batch in ready_batches {
             request.buckets_req.push(PbProduceLogReqForBucket {
                 partition_id: ready_batch.table_bucket.partition_id(),

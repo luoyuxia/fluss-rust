@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use crate::client::connection::FlussConnection;
 use crate::client::metadata::Metadata;
 use crate::client::table::append::TableAppend;
 use crate::client::table::scanner::TableScan;
 use crate::metadata::{TableInfo, TablePath};
+use std::sync::Arc;
 
 use crate::error::Result;
 
@@ -12,6 +12,7 @@ mod append;
 mod scanner;
 mod writer;
 
+#[allow(dead_code)]
 pub struct FlussTable<'a> {
     conn: &'a FlussConnection,
     metadata: Arc<Metadata>,
@@ -43,7 +44,7 @@ impl<'a> FlussTable<'a> {
         ))
     }
 
-    pub fn new_scan(&self) -> TableScan {
+    pub fn new_scan(&self) -> TableScan<'_> {
         TableScan::new(self.conn, self.table_info.clone(), self.metadata.clone())
     }
 }

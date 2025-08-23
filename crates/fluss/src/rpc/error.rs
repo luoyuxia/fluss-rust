@@ -1,13 +1,11 @@
-use std::sync::Arc;
-use thiserror::Error;
 use crate::rpc::api_key::ApiKey;
 use crate::rpc::api_version::ApiVersion;
+use std::sync::Arc;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum RpcError {
-
-
     #[error("Cannot write message: {0}")]
     WriteMessageError(#[from] crate::rpc::frame::WriteError),
 
@@ -33,4 +31,3 @@ pub enum RpcError {
         api_version: ApiVersion,
     },
 }
-

@@ -1,8 +1,9 @@
-use std::sync::Arc;
+use crate::row::InternalRow;
 use arrow::array::{
     AsArray, BinaryArray, FixedSizeBinaryArray, Float32Array, Float64Array, Int8Array, Int16Array,
     Int32Array, Int64Array, RecordBatch, StringArray,
-};use crate::row::InternalRow;
+};
+use std::sync::Arc;
 
 pub struct ColumnarRow {
     record_batch: Arc<RecordBatch>,
@@ -28,8 +29,6 @@ impl ColumnarRow {
         self.row_id = row_id
     }
 }
-
-
 
 impl InternalRow for ColumnarRow {
     fn get_field_count(&self) -> usize {
@@ -131,7 +130,7 @@ impl InternalRow for ColumnarRow {
             .value(self.row_id)
     }
 
-    fn get_binary(&self, pos: usize, length: usize) -> Vec<u8> {
+    fn get_binary(&self, pos: usize, _length: usize) -> Vec<u8> {
         self.record_batch
             .column(pos)
             .as_any()

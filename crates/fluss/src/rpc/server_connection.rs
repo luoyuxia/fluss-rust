@@ -1,3 +1,14 @@
+use crate::cluster::ServerNode;
+use crate::rpc::api_version::ApiVersion;
+use crate::rpc::error::RpcError;
+use crate::rpc::error::RpcError::ConnectionError;
+use crate::rpc::frame::{AsyncMessageRead, AsyncMessageWrite};
+use crate::rpc::message::{
+    ReadVersionedType, RequestBody, RequestHeader, ResponseHeader, WriteVersionedType,
+};
+use crate::rpc::transport::Transport;
+use futures::future::BoxFuture;
+use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::ops::DerefMut;
@@ -5,26 +16,15 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::task::Poll;
 use std::time::Duration;
-use futures::future::BoxFuture;
-use parking_lot::{Mutex, RwLock};
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt, BufStream, WriteHalf};
-use tokio::sync::oneshot::{channel, Sender};
-use crate::rpc::error::RpcError;
-use crate::rpc::message::{ReadVersionedType, RequestBody, RequestHeader, ResponseHeader, WriteVersionedType};
-use crate::rpc::transport::Transport;
 use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync::oneshot::{Sender, channel};
 use tokio::task::JoinHandle;
 use tracing::warn;
-use crate::cluster::ServerNode;
-use crate::rpc::api_version::ApiVersion;
-use crate::rpc::error::RpcError::ConnectionError;
-use crate::rpc::frame::{AsyncMessageRead, AsyncMessageWrite};
-
 
 pub type MessengerTransport = ServerConnectionInner<BufStream<Transport>>;
 
 pub type ServerConnection = Arc<MessengerTransport>;
-
 
 #[derive(Debug, Default)]
 pub struct RpcClient {
@@ -44,7 +44,10 @@ impl RpcClient {
         }
     }
 
-    pub async fn get_connection(&self, server_node: &ServerNode) -> Result<ServerConnection, RpcError> {
+    pub async fn get_connection(
+        &self,
+        server_node: &ServerNode,
+    ) -> Result<ServerConnection, RpcError> {
         let server_id = server_node.uid();
         {
             let connections = self.connections.read();
@@ -52,25 +55,26 @@ impl RpcClient {
                 return Ok(connection.clone());
             }
         }
-        
+
         let new_server = self.connect(server_node).await?;
         self.connections
             .write()
             .insert(server_id.clone(), new_server.clone());
-        
+
         Ok(new_server)
     }
-    
+
     async fn connect(&self, server_node: &ServerNode) -> Result<ServerConnection, RpcError> {
         let url = server_node.url();
         let transport = Transport::connect(&url, self.timeout)
             .await
             .map_err(|error| ConnectionError(error.to_string()))?;
 
-
-        let messenger = ServerConnectionInner::new(BufStream::new(transport), 
-                                                   self.max_message_size, 
-                                                   self.client_id.clone());
+        let messenger = ServerConnectionInner::new(
+            BufStream::new(transport),
+            self.max_message_size,
+            self.client_id.clone(),
+        );
         Ok(ServerConnection::new(messenger))
     }
 }
@@ -81,7 +85,6 @@ struct Response {
     header: ResponseHeader,
     data: Cursor<Vec<u8>>,
 }
-
 
 #[derive(Debug)]
 struct ActiveRequest {
@@ -126,7 +129,6 @@ impl ConnectionState {
 
 #[derive(Debug)]
 pub struct ServerConnectionInner<RW> {
-
     /// The half of the stream that we use to send data TO the broker.
     ///
     /// This will be used by [`request`](Self::request) to queue up messages.
@@ -142,7 +144,8 @@ pub struct ServerConnectionInner<RW> {
 }
 
 impl<RW> ServerConnectionInner<RW>
-where RW: AsyncRead + AsyncWrite + Send + 'static,
+where
+    RW: AsyncRead + AsyncWrite + Send + 'static,
 {
     pub fn new(stream: RW, max_message_size: usize, client_id: Arc<str>) -> Self {
         let (stream_read, stream_write) = tokio::io::split(stream);
@@ -192,11 +195,9 @@ where RW: AsyncRead + AsyncWrite + Send + 'static,
                                 data: cursor,
                             }))
                             .ok();
-                    },
+                    }
                     Err(e) => {
-                        state_captured
-                            .lock()
-                            .poison(RpcError::ReadMessageError(e));
+                        state_captured.lock().poison(RpcError::ReadMessageError(e));
                         return;
                     }
                 }
@@ -215,7 +216,8 @@ where RW: AsyncRead + AsyncWrite + Send + 'static,
     pub async fn request<R>(&self, msg: R) -> Result<R::ResponseBody, RpcError>
     where
         R: RequestBody + Send + WriteVersionedType<Vec<u8>>,
-        R::ResponseBody: ReadVersionedType<Cursor<Vec<u8>>>, {
+        R::ResponseBody: ReadVersionedType<Cursor<Vec<u8>>>,
+    {
         let request_id = self.request_id.fetch_add(1, Ordering::SeqCst);
         let header = RequestHeader {
             request_api_key: R::API_KEY,
@@ -230,8 +232,7 @@ where RW: AsyncRead + AsyncWrite + Send + 'static,
 
         let mut buf = Vec::new();
         // write header
-        header
-            .write_versioned(&mut buf, header_version)?;
+        header.write_versioned(&mut buf, header_version)?;
         // write message body
         msg.write_versioned(&mut buf, body_api_version)?;
 
@@ -239,25 +240,18 @@ where RW: AsyncRead + AsyncWrite + Send + 'static,
 
         // to prevent stale data in inner state, ensure that we would remove the request again if we are cancelled while
         // sending the request
-        let cleanup_on_cancel =
-            CleanupRequestStateOnCancel::new(Arc::clone(&self.state), request_id);
-
-        // to prevent stale data in inner state, ensure that we would remove the request again if we are cancelled while
-        // sending the request
-        let cleanup_on_cancel =
+        let _cleanup_on_cancel =
             CleanupRequestStateOnCancel::new(Arc::clone(&self.state), request_id);
 
         match self.state.lock().deref_mut() {
             ConnectionState::RequestMap(map) => {
                 map.insert(request_id, ActiveRequest { channel: tx });
             }
-            ConnectionState::Poison(e) => {
-              return   Err(RpcError::Poisoned(Arc::clone(e)))
-            }
+            ConnectionState::Poison(e) => return Err(RpcError::Poisoned(Arc::clone(e))),
         }
 
         self.send_message(buf).await?;
-        cleanup_on_cancel.message_sent();
+        _cleanup_on_cancel.message_sent();
         let mut response = rx.await.expect("Who closed this channel?!")?;
 
         let body = R::ResponseBody::read_versioned(&mut response.data, body_api_version)?;
@@ -285,7 +279,6 @@ where RW: AsyncRead + AsyncWrite + Send + 'static,
             }
         }
     }
-
 
     async fn send_message_inner(&self, msg: Vec<u8>) -> Result<(), RpcError> {
         let mut stream_write = Arc::clone(&self.stream_write).lock_owned().await;
@@ -354,7 +347,6 @@ where
     }
 }
 
-
 /// Helper that ensures that a request is removed when a request is cancelled before it was actually sent out.
 struct CleanupRequestStateOnCancel {
     state: Arc<Mutex<ConnectionState>>,
@@ -389,6 +381,3 @@ impl Drop for CleanupRequestStateOnCancel {
         }
     }
 }
-
-
-

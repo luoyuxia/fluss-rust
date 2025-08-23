@@ -1,13 +1,14 @@
-use std::cmp::max;
 use crate::BucketId;
 use crate::client::broadcast::{BatchWriteResult, BroadcastOnce};
 use crate::client::{ResultHandle, WriteRecord};
 use crate::metadata::{DataType, TablePath};
+use std::cmp::max;
 
 use crate::error::Result;
 use crate::record::MemoryLogRecordsArrowBuilder;
 
-struct InnerWriteBatch {
+#[allow(dead_code)]
+pub struct InnerWriteBatch {
     batch_id: i64,
     table_path: TablePath,
     create_ms: i64,

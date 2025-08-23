@@ -1,7 +1,7 @@
-use std::sync::atomic::{AtomicI32, Ordering};
-use rand::Rng;
 use crate::cluster::Cluster;
 use crate::metadata::TablePath;
+use rand::Rng;
+use std::sync::atomic::{AtomicI32, Ordering};
 
 pub trait BucketAssigner: Sync + Send {
     fn abort_if_batch_full(&self) -> bool;
@@ -53,7 +53,13 @@ impl StickyBucketAssigner {
             self.current_bucket_id.store(new_bucket, Ordering::Relaxed);
         } else {
             self.current_bucket_id
-                .compare_and_swap(prev_bucket_id, new_bucket, Ordering::Relaxed);
+                .compare_exchange(
+                    prev_bucket_id,
+                    new_bucket,
+                    Ordering::Relaxed,
+                    Ordering::Relaxed,
+                )
+                .ok();
         }
         self.current_bucket_id.load(Ordering::Relaxed)
     }
@@ -68,7 +74,7 @@ impl BucketAssigner for StickyBucketAssigner {
         self.next_bucket(cluster, prev_bucket_id);
     }
 
-    fn assign_bucket(&self, bucket_key: Option<&[u8]>, cluster: &Cluster) -> i32 {
+    fn assign_bucket(&self, _bucket_key: Option<&[u8]>, cluster: &Cluster) -> i32 {
         let bucket_id = self.current_bucket_id.load(Ordering::Relaxed);
         if bucket_id < 0 {
             self.next_bucket(cluster, bucket_id)

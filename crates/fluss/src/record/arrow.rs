@@ -14,15 +14,14 @@ use byteorder::{ByteOrder, LittleEndian};
 use crc32c::crc32c;
 use parking_lot::Mutex;
 use std::{
-    io::{Cursor, Read, Write},
+    io::{Cursor, Write},
     sync::Arc,
 };
-use tokio::io::AsyncReadExt;
 
-use crate::metadata::DataType;
 use crate::error::Result;
-use crate::row::{ColumnarRow, GenericRow};
+use crate::metadata::DataType;
 use crate::record::{ChangeType, ScanRecord};
+use crate::row::{ColumnarRow, GenericRow};
 
 /// const for record batch
 pub const BASE_OFFSET_LENGTH: usize = 8;
@@ -265,6 +264,7 @@ pub struct LogRecordBatch<'a> {
     data: &'a [u8],
 }
 
+#[allow(dead_code)]
 impl<'a> LogRecordBatch<'a> {
     pub fn new(data: &'a [u8]) -> Self {
         LogRecordBatch { data }
@@ -360,13 +360,11 @@ impl<'a> LogRecordBatch<'a> {
 
         // need to combine arrow_metadata_bytes + arrow_batch_data
         let cursor = Cursor::new([&arrow_metadata_bytes, data].concat());
-        let stream_reader = StreamReader::try_new(cursor, None).unwrap();
+        let mut stream_reader = StreamReader::try_new(cursor, None).unwrap();
 
         let mut record_batch = None;
-        for bath in stream_reader {
+        if let Some(bath) = stream_reader.next() {
             record_batch = Some(bath.unwrap());
-            // todo: check only one?
-            break;
         }
 
         if record_batch.is_none() {
@@ -425,9 +423,9 @@ pub fn to_arrow_type(fluss_type: &DataType) -> ArrowDataType {
         DataType::TimestampLTz(_) => todo!(),
         DataType::Bytes(_) => todo!(),
         DataType::Binary(_) => todo!(),
-        DataType::Array(data_type) => todo!(),
-        DataType::Map(data_type) => todo!(),
-        DataType::Row(data_fields) => todo!(),
+        DataType::Array(_data_type) => todo!(),
+        DataType::Map(_data_type) => todo!(),
+        DataType::Row(_data_fields) => todo!(),
     }
 }
 
@@ -442,7 +440,7 @@ impl ReadContext {
 
     pub fn to_arrow_metadata(&self) -> Result<Vec<u8>> {
         let mut arrow_schema_bytes = vec![];
-        let writer = StreamWriter::try_new(&mut arrow_schema_bytes, &self.arrow_schema)?;
+        let _writer = StreamWriter::try_new(&mut arrow_schema_bytes, &self.arrow_schema)?;
         Ok(arrow_schema_bytes)
     }
 }
@@ -477,6 +475,7 @@ pub struct ArrowLogRecordIterator {
     change_type: ChangeType,
 }
 
+#[allow(dead_code)]
 impl ArrowLogRecordIterator {
     fn new(reader: ArrowReader, base_offset: i64, timestamp: i64, change_type: ChangeType) -> Self {
         Self {

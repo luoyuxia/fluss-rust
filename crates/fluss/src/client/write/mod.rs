@@ -1,12 +1,12 @@
 mod accumulator;
 mod batch;
 
-use std::sync::Arc;
-pub use accumulator::*;
 use crate::client::broadcast::{BatchWriteResult, BroadcastOnceReceiver};
 use crate::error::Error;
 use crate::metadata::TablePath;
 use crate::row::GenericRow;
+pub use accumulator::*;
+use std::sync::Arc;
 
 pub(crate) mod broadcast;
 mod bucket_assigner;

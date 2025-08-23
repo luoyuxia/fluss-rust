@@ -6,9 +6,9 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 
 pub trait JsonSerde: Sized {
-     fn serialize_json(&self) -> Result<Value>;
+    fn serialize_json(&self) -> Result<Value>;
 
-     fn deserialize_json(node: &Value) -> Result<Self>;
+    fn deserialize_json(node: &Value) -> Result<Self>;
 }
 
 impl DataType {
@@ -41,15 +41,24 @@ impl DataType {
     const FIELD_NAME_TYPE_NAME: &'static str = "type";
     const FIELD_NAME_NULLABLE: &'static str = "nullable";
     const FIELD_NAME_LENGTH: &'static str = "length";
+    #[allow(dead_code)]
     const FIELD_NAME_PRECISION: &'static str = "precision";
+    #[allow(dead_code)]
     const FILED_NAME_SCALE: &'static str = "scale";
+    #[allow(dead_code)]
     const FIELD_NAME_ELEMENT_TYPE: &'static str = "element_type";
+    #[allow(dead_code)]
     const FIELD_NAME_KEY_TYPE: &'static str = "key_type";
+    #[allow(dead_code)]
     const FIELD_NAME_VALUE_TYPE: &'static str = "value_type";
+    #[allow(dead_code)]
     const FIELD_NAME_FIELDS: &'static str = "fields";
+    #[allow(dead_code)]
     const FIELD_NAME_FIELD_NAME: &'static str = "name";
     // ROW
+    #[allow(dead_code)]
     const FIELD_NAME_FIELD_TYPE: &'static str = "field_type";
+    #[allow(dead_code)]
     const FIELD_NAME_FIELD_DESCRIPTION: &'static str = "description";
 }
 
@@ -105,7 +114,7 @@ impl JsonSerde for DataType {
     }
 
     fn deserialize_json(node: &Value) -> Result<Self> {
-        let mut is_nullable = true;
+        let mut _is_nullable = true;
         let type_root = node
             .get(Self::FIELD_NAME_TYPE_NAME)
             .and_then(|v| v.as_str())
@@ -140,8 +149,8 @@ impl JsonSerde for DataType {
         };
 
         if let Some(nullable) = node.get(Self::FIELD_NAME_NULLABLE) {
-            is_nullable = nullable.as_bool().unwrap_or(true);
-            if !is_nullable {
+            let nullable_value = nullable.as_bool().unwrap_or(true);
+            if !nullable_value {
                 data_type = data_type.as_non_nullable();
             }
         }
@@ -300,7 +309,7 @@ impl TableDescriptor {
 }
 
 impl JsonSerde for TableDescriptor {
-     fn serialize_json(&self) -> Result<Value> {
+    fn serialize_json(&self) -> Result<Value> {
         let mut obj = serde_json::Map::new();
 
         // Serialize version

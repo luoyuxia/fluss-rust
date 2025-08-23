@@ -1,7 +1,7 @@
 mod admin;
+mod connection;
 mod table;
 mod write;
-mod connection;
 
 pub use connection::*;
 mod metadata;
