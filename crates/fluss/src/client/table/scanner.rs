@@ -6,10 +6,10 @@ use crate::proto::{FetchLogRequest, PbFetchLogReqForBucket, PbFetchLogReqForTabl
 use crate::record::{LogRecordsBatchs, ReadContext, ScanRecord, ScanRecords, to_arrow_schema};
 use crate::rpc::RpcClient;
 use crate::util::FairBucketStatusMap;
-use std::cell::Cell;
+use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::slice::from_ref;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
 const LOG_FETCH_MAX_BYTES: i32 = 16 * 1024 * 1024;
@@ -226,37 +226,31 @@ impl LogFetcher {
     }
 }
 
-#[allow(dead_code)]
 pub struct LogScannerStatus {
-    bucket_status_map: Arc<Mutex<FairBucketStatusMap<BucketScanStatus>>>,
+    bucket_status_map: Arc<RwLock<FairBucketStatusMap<BucketScanStatus>>>,
 }
-
-// SAFETY: LogScannerStatus is safe to send and sync because it only contains Arc<Mutex<...>>
-// which are already Send and Sync
-unsafe impl Send for LogScannerStatus {}
-unsafe impl Sync for LogScannerStatus {}
 
 #[allow(dead_code)]
 impl LogScannerStatus {
     pub fn new() -> Self {
         Self {
-            bucket_status_map: Arc::new(Mutex::new(FairBucketStatusMap::new())),
+            bucket_status_map: Arc::new(RwLock::new(FairBucketStatusMap::new())),
         }
     }
 
     pub fn prepare_to_poll(&self) -> bool {
-        let map = self.bucket_status_map.lock().unwrap();
+        let map = self.bucket_status_map.read();
         map.size() > 0
     }
 
     pub fn move_bucket_to_end(&self, table_bucket: TableBucket) {
-        let mut map = self.bucket_status_map.lock().unwrap();
+        let mut map = self.bucket_status_map.write();
         map.move_to_end(table_bucket);
     }
 
     /// Gets the offset of a bucket if it exists
     pub fn get_bucket_offset(&self, table_bucket: &TableBucket) -> Option<i64> {
-        let map = self.bucket_status_map.lock().unwrap();
+        let map = self.bucket_status_map.read();
         map.status_value(table_bucket).map(|status| status.offset())
     }
 
@@ -273,7 +267,7 @@ impl LogScannerStatus {
     }
 
     pub fn assign_scan_buckets(&self, scan_bucket_offsets: HashMap<TableBucket, i64>) {
-        let mut map = self.bucket_status_map.lock().unwrap();
+        let mut map = self.bucket_status_map.write();
         for (bucket, offset) in scan_bucket_offsets {
             let status = map
                 .status_value(&bucket)
@@ -286,15 +280,12 @@ impl LogScannerStatus {
 
     pub fn assign_scan_bucket(&self, table_bucket: TableBucket, offset: i64) {
         let status = Arc::new(BucketScanStatus::new(offset));
-        self.bucket_status_map
-            .lock()
-            .unwrap()
-            .update(table_bucket, status);
+        self.bucket_status_map.write().update(table_bucket, status);
     }
 
     /// Unassigns scan buckets
     pub fn unassign_scan_buckets(&self, buckets: &[TableBucket]) {
-        let mut map = self.bucket_status_map.lock().unwrap();
+        let mut map = self.bucket_status_map.write();
         for bucket in buckets {
             map.remove(bucket);
         }
@@ -305,7 +296,7 @@ impl LogScannerStatus {
     where
         F: Fn(&TableBucket) -> bool,
     {
-        let map = self.bucket_status_map.lock().unwrap();
+        let map = self.bucket_status_map.read();
         let mut result = Vec::new();
         map.for_each(|bucket, _| {
             if is_available(bucket) {
@@ -317,7 +308,7 @@ impl LogScannerStatus {
 
     /// Helper to get bucket status
     fn get_status(&self, table_bucket: &TableBucket) -> Option<Arc<BucketScanStatus>> {
-        let map = self.bucket_status_map.lock().unwrap();
+        let map = self.bucket_status_map.read();
         map.status_value(table_bucket).cloned()
     }
 }
@@ -328,40 +319,35 @@ impl Default for LogScannerStatus {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 #[allow(dead_code)]
 pub struct BucketScanStatus {
-    offset: Cell<i64>,
-    high_watermark: Cell<i64>,
+    offset: RwLock<i64>,
+    high_watermark: RwLock<i64>,
 }
-
-// SAFETY: BucketScanStatus is safe to send and sync because it only contains Cell<i64>
-// which are already Send and Sync
-unsafe impl Send for BucketScanStatus {}
-unsafe impl Sync for BucketScanStatus {}
 
 #[allow(dead_code)]
 impl BucketScanStatus {
     pub fn new(offset: i64) -> Self {
         Self {
-            offset: Cell::new(offset),
-            high_watermark: Cell::new(0),
+            offset: RwLock::new(offset),
+            high_watermark: RwLock::new(0),
         }
     }
 
     pub fn offset(&self) -> i64 {
-        self.offset.get()
+        *self.offset.read()
     }
 
     pub fn set_offset(&self, offset: i64) {
-        self.offset.set(offset);
+        *self.offset.write() = offset
     }
 
     pub fn high_watermark(&self) -> i64 {
-        self.high_watermark.get()
+        *self.high_watermark.read()
     }
 
     pub fn set_high_watermark(&self, high_watermark: i64) {
-        self.high_watermark.set(high_watermark);
+        *self.high_watermark.write() = high_watermark
     }
 }

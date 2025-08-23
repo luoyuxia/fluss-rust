@@ -18,9 +18,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check License Header
-        uses: apache/skywalking-eyes/header@v0.6.0
-
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 

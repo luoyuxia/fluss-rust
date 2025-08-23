@@ -3,7 +3,6 @@ use linked_hash_map::LinkedHashMap;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn current_time_ms() -> i64 {
@@ -15,7 +14,7 @@ pub fn current_time_ms() -> i64 {
 
 pub struct FairBucketStatusMap<S> {
     map: LinkedHashMap<TableBucket, Arc<S>>,
-    size: AtomicUsize,
+    size: usize,
 }
 
 #[allow(dead_code)]
@@ -23,7 +22,7 @@ impl<S> FairBucketStatusMap<S> {
     pub fn new() -> Self {
         Self {
             map: LinkedHashMap::new(),
-            size: AtomicUsize::new(0),
+            size: 0,
         }
     }
 
@@ -31,7 +30,6 @@ impl<S> FairBucketStatusMap<S> {
     pub fn move_to_end(&mut self, table_bucket: TableBucket)
     where
         TableBucket: Eq + Hash,
-        S: Clone,
     {
         if let Some(status) = self.map.remove(&table_bucket) {
             self.map.insert(table_bucket, status);
@@ -118,7 +116,7 @@ impl<S> FairBucketStatusMap<S> {
 
     /// Gets the current bucket count (thread-safe)
     pub fn size(&self) -> usize {
-        self.size.load(Ordering::Relaxed)
+        self.size
     }
 
     pub fn set(&mut self, bucket_to_status: HashMap<TableBucket, Arc<S>>)
@@ -150,7 +148,7 @@ impl<S> FairBucketStatusMap<S> {
     }
 
     fn update_size(&mut self) {
-        self.size.store(self.map.len(), Ordering::Relaxed);
+        self.size = self.map.len()
     }
 }
 
