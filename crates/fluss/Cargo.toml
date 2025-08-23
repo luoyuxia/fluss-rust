@@ -47,6 +47,9 @@ ref-cast = "1.0"
 chrono = { version = "0.4", features = ["clock", "std", "wasmbind"] }
 
 
+[features]
+integration_tests = []
+
 
 [build-dependencies]
 prost-build = {  version = "0.13.5"  }

@@ -53,25 +53,42 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
+          - macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install protoc
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            brew install protobuf
+          fi
       - name: Build
         run: cargo build
 
-  unit:
+  test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os:
           - ubuntu-latest
+          - macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install protoc
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-      - name: Test
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            brew install protobuf
+          fi
+      - name: Unit Test
         run: cargo test --all-targets --workspace
+        env:
+          RUST_LOG: DEBUG
+          RUST_BACKTRACE: full
+      - name: Integration Test
+        run: cargo test --features integration_tests --all-targets --workspace
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
